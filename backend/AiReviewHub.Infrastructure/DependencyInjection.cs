@@ -8,56 +8,68 @@ using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using OpenAI;
 
-namespace AiReviewHub.Infrastructure
+namespace AiReviewHub.Infrastructure;
+
+public static class DependencyInjection
 {
-    public static class DependencyInjection
+    public static IServiceCollection AddInfrastructureDI(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
-        public static IServiceCollection AddInfrastructureDI(this IServiceCollection services, IConfiguration configuration)
-        {
-            services.AddDbContext<AppDbContext>(options =>
-                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"))
-            );
+        // ─── Base de données ──────────────────────────────────
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseNpgsql(
+                configuration.GetConnectionString("DefaultConnection")));
 
-            services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+        services.AddScoped<IAppDbContext>(sp =>
+            sp.GetRequiredService<AppDbContext>());
 
-            services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        // ─── Services domaine ─────────────────────────────────
+        services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
+        services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
+        services.AddScoped<IFeedbackAnalysisQueue, HangfireFeedbackAnalysisQueue>();
 
-            services.AddScoped<IPasswordHasher, PasswordHasher>();
+        // ─── OpenAI — singletons (réutilise les sockets HTTP) ─
+        var openAiKey = configuration["OpenAI:ApiKey"]
+            ?? throw new InvalidOperationException("OpenAI:ApiKey is not configured");
+        var openAiModel = configuration["OpenAI:Model"] ?? "gpt-4.1-mini";
 
-            services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddSingleton(new OpenAIClient(openAiKey));
+        services.AddSingleton(sp =>
+            sp.GetRequiredService<OpenAIClient>().GetChatClient(openAiModel));
 
-            services.AddScoped<ITokenService, TokenService>();
-            
-            services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
+        services.AddScoped<IAiAnalysisService, AiAnalysisService>();
 
-            services.AddScoped<IAiAnalysisService, AiAnalysisService>();
-            services.AddScoped<FeedbackAnalysisJob>();
+        // ─── Quota IA ─────────────────────────────────────────
+        services.AddMemoryCache();
+        services.AddScoped<IAiQuotaService, AiQuotaService>();
 
-
-            services.AddHangfire(config => config
-                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-                .UseSimpleAssemblyNameTypeSerializer()
-                .UseRecommendedSerializerSettings()
-                .UsePostgreSqlStorage(options =>         
-                {
-                    options.UseNpgsqlConnection(
-                        configuration.GetConnectionString("DefaultConnection"));
-                }));
-
-            services.AddHangfireServer(options =>
+        // ─── Hangfire ─────────────────────────────────────────
+        services.AddHangfire(config => config
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UsePostgreSqlStorage(options =>
             {
-                options.WorkerCount = 2;  // 2 workers parallèles
-                options.Queues = ["default"];
-            });
+                options.UseNpgsqlConnection(
+                    configuration.GetConnectionString("DefaultConnection"));
+            }));
 
-            services.AddScoped<RefreshTokenCleanupJob>();
+        services.AddHangfireServer(options =>
+        {
+            options.WorkerCount = 4;
+            options.Queues = ["critical", "default", "free"];
+        });
 
-            return services;
-        }
+        // ─── Jobs ─────────────────────────────────────────────
+        services.AddScoped<FeedbackAnalysisJob>();
+        services.AddScoped<RefreshTokenCleanupJob>();
 
+        return services;
     }
 }

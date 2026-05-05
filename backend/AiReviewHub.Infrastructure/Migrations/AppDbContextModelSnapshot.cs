@@ -29,10 +29,13 @@ namespace AiReviewHub.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("AiAnalysisError")
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
-                    b.Property<int>("AiAnalysisStatus")
-                        .HasColumnType("integer");
+                    b.Property<string>("AiAnalysisStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("AiSummary")
                         .IsRequired()
