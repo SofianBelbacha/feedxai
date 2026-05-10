@@ -1,6 +1,6 @@
-# AiReviewHub
+# FeedXAi
 
-AiReviewHub est une plateforme SaaS moderne de collecte, centralisation et analyse intelligente de feedback client.
+FeedXAi est une plateforme SaaS moderne de collecte, centralisation et analyse intelligente de feedback client.
 
 ## 🚀 Objectif
 
@@ -257,10 +257,10 @@ Propriétaire — Tous droits réservés.
 
 # 👤 Auteur
 
-Développé par l’équipe AiReviewHub.
+Développé par Sofian Belbacha.
 
 ---
 
 # 💡 Vision
 
-AiReviewHub vise à devenir une solution complète de Voice of Customer assistée par IA, simple à intégrer, performante et scalable.
+FeedXAi vise à devenir une solution complète de Voice of Customer assistée par IA, simple à intégrer, performante et scalable.
