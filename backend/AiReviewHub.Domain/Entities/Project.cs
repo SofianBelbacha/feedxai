@@ -18,6 +18,8 @@ namespace AiReviewHub.Domain.Entities
 
         public Guid UserId { get; private set; }
         public User User { get; private set; } = null!;
+        public string? WidgetConfigJson { get; private set; }
+
         public ICollection<Feedback> Feedbacks { get; private set; } = [];
 
         private Project() { }
@@ -87,6 +89,11 @@ namespace AiReviewHub.Domain.Entities
             if (description.Length > MaxDescriptionLength)
                 throw new ArgumentException($"Description cannot exceed {MaxDescriptionLength} characters");
         }
-    }
 
+        public void SaveWidgetConfig(string configJson, DateTime now)
+        {
+            WidgetConfigJson = configJson;
+            UpdatedAt = now;
+        }
+    }
 }

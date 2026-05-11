@@ -1,9 +1,10 @@
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, computed, HostListener, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserService } from '../../../core/services/user.service';
- 
+import { DashboardContextService } from '../../../core/services/dashboard-context.service';
+
 interface NavItem {
   label: string;
   path: string;
@@ -18,36 +19,38 @@ interface NavItem {
   styleUrl: './dashboard-shell.scss',
 })
 export class DashboardShell {
-  
+
   private readonly auth = inject(AuthService);
   private readonly userService = inject(UserService);
-
-  readonly profile  = this.userService.profile;
+  private readonly dashboardContext  = inject(DashboardContextService);
+  readonly profile = this.userService.profile;
   readonly fullName = this.userService.fullName;
   readonly initials = this.userService.initials;
+  readonly currentProject = this.dashboardContext.selectedProject;
+  readonly currentPlan = this.dashboardContext.plan;
+
 
 
   sidebarCollapsed = signal(false);
-  mobileMenuOpen   = signal(false);
-  logoutLoading    = signal(false);
- 
+  mobileMenuOpen = signal(false);
+  logoutLoading = signal(false);
+
   // Projet actif simulé
-  currentProject = signal({ name: 'Refonte e-commerce', plan: 'Pro' });
- 
+
   navItems: NavItem[] = [
-    { label: 'Vue d\'ensemble', path: '/dashboard', icon: 'home'},
-    { label: 'Projets', path: '/dashboard/projects', icon: 'folder', badge: 3},
-    { label: 'Feedbacks', path: '/dashboard/feedbacks', icon: 'messages', badge: 12},
-    { label: 'Tendances', path: '/dashboard/trends', icon: 'chart'},
-    { label: 'Widget', path: '/dashboard/widget', icon: 'code'},
-  ];
- 
-  bottomNavItems: NavItem[] = [
-    { label: 'Paramètres', path: '/dashboard/settings', icon: 'settings'},
-    { label: 'Aide', path: '/dashboard/help', icon: 'help'},
+    { label: 'Vue d\'ensemble', path: '/dashboard', icon: 'home' },
+    { label: 'Projets', path: '/dashboard/projects', icon: 'folder', badge: 3 },
+    { label: 'Feedbacks', path: '/dashboard/feedbacks', icon: 'messages', badge: 12 },
+    { label: 'Tendances', path: '/dashboard/trends', icon: 'chart' },
+    { label: 'Widget', path: '/dashboard/widget', icon: 'code' },
   ];
 
-    // ─── Logout ───────────────────────────────────────────────
+  bottomNavItems: NavItem[] = [
+    { label: 'Paramètres', path: '/dashboard/settings', icon: 'settings' },
+    { label: 'Aide', path: '/dashboard/help', icon: 'help' },
+  ];
+
+  // ─── Logout ───────────────────────────────────────────────
   logout(): void {
     if (this.logoutLoading()) return; // évite double-clic
     this.logoutLoading.set(true);
@@ -56,21 +59,21 @@ export class DashboardShell {
     this.auth.logout();
   }
 
- 
+
   toggleSidebar(): void {
     this.sidebarCollapsed.update(v => !v);
   }
- 
+
   toggleMobileMenu(): void {
     this.mobileMenuOpen.update(v => !v);
     document.body.style.overflow = this.mobileMenuOpen() ? 'hidden' : '';
   }
- 
+
   closeMobileMenu(): void {
     this.mobileMenuOpen.set(false);
     document.body.style.overflow = '';
   }
- 
+
   @HostListener('window:keydown.escape')
   onEscape(): void {
     this.closeMobileMenu();

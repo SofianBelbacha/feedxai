@@ -1,7 +1,9 @@
 ﻿using AiReviewHub.Application.Projects.Commands.CreateProject;
 using AiReviewHub.Application.Projects.Commands.DeactivateProject;
 using AiReviewHub.Application.Projects.Commands.RegenerateProjectToken;
+using AiReviewHub.Application.Projects.Commands.SaveWidgetConfig;
 using AiReviewHub.Application.Projects.Queries.GetProjectsByUser;
+using AiReviewHub.Application.Projects.Queries.GetWidgetConfig;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -57,7 +59,38 @@ namespace AiReviewHub.Api.Controllers
                 new RegenerateProjectTokenCommand(id), cancellationToken);
             return Ok(new { publicToken = result.PublicToken });
         }
+
+        [HttpGet("{id:guid}/widget-config")]
+        public async Task<IActionResult> GetWidgetConfig(
+            Guid id, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(
+                new GetWidgetConfigQuery(id), cancellationToken);
+            return Ok(result);
+        }
+
+        [HttpPut("{id:guid}/widget-config")]
+        public async Task<IActionResult> SaveWidgetConfig(
+            Guid id,
+            [FromBody] SaveWidgetConfigRequest request,
+            CancellationToken cancellationToken)
+        {
+            await _mediator.Send(
+                new SaveWidgetConfigCommand(
+                    id,
+                    request.Mode,
+                    request.Position,
+                    request.PrimaryColor,
+                    request.Title,
+                    request.Placeholder,
+                    request.ButtonLabel),
+                cancellationToken);
+            return NoContent();
+        }
     }
     public record CreateProjectRequest(string Name, string Description);
+
+    public record SaveWidgetConfigRequest(string Mode, string Position, string PrimaryColor, string Title, string Placeholder, string ButtonLabel);
+
 
 }

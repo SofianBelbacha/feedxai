@@ -10,12 +10,9 @@
       </p>
     </div>
 
-    <div class="feedbacks__export-wrap" [title]="userService.profile()?.plan === 'Free'
-    ? 'Disponible à partir du plan Pro (9€/mois)'
-    : ''">
+    <div class="feedbacks__export-wrap" [title]="!isPro ? 'Disponible à partir du plan Pro (9€/mois)' : ''">
       <button class="feedbacks__export-btn" [disabled]="exporting() || totalCount() === 0"
         [class.feedbacks__export-btn--loading]="exporting()" (click)="exportCsv()" title="Exporter en CSV">
-    </div>
     @if (exporting()) {
     <span class="feedbacks__export-spinner"></span>
     Export…
@@ -27,9 +24,8 @@
       <line x1="2" y1="14" x2="14" y2="14" />
     </svg>
     Exporter CSV
-    }
-    </button>
-
+    }</button>
+    </div>
   </header>
 
   <!-- ── Filtres ───────────────────────────────────────────── -->
@@ -73,7 +69,6 @@
       Réinitialiser
     </button>
     }
-
   </div>
 
   <!-- ── Loading ───────────────────────────────────────────── -->

@@ -6,6 +6,7 @@ import { UserService } from '../../../core/services/user.service';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { environment } from '../../../../environments/environment';
+import { DashboardContextService } from '../../../core/services/dashboard-context.service';
 
 @Component({
   selector: 'app-projects',
@@ -17,6 +18,7 @@ export class Projects implements OnInit {
   private readonly service = inject(ProjectsService);
   private readonly router = inject(Router);
   private readonly userService = inject(UserService);
+  private readonly dashboardContext = inject(DashboardContextService);
 
   // ─── State ────────────────────────────────────────────────
   loading = signal(true);
@@ -129,6 +131,7 @@ export class Projects implements OnInit {
 
   // ─── Navigation vers feedbacks ────────────────────────────
   openFeedbacks(project: Project): void {
+    this.dashboardContext.setProject(project);
     this.router.navigate([
       '/dashboard/projects', project.id, 'feedbacks'
     ]);

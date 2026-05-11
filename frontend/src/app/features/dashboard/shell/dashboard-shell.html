@@ -36,11 +36,11 @@
       <div class="sidebar__project">
         <div class="sidebar__project-info">
           <div class="sidebar__project-avatar" aria-hidden="true">
-            {{ currentProject().name.charAt(0) }}
+            {{ currentProject()?.name?.charAt(0) }}
           </div>
           <div class="sidebar__project-meta">
-            <span class="sidebar__project-name">{{ currentProject().name }}</span>
-            <span class="sidebar__project-plan">{{ currentProject().plan }}</span>
+            <span class="sidebar__project-name">{{ currentProject()?.name || 'Aucun projet sélectionné' }}</span>
+            <span class="sidebar__project-plan">{{ currentPlan() }}</span>
           </div>
         </div>
         <button class="sidebar__project-switch" type="button" aria-label="Changer de projet">

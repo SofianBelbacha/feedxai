@@ -33,6 +33,9 @@ namespace AiReviewHub.Infrastructure.Persistence.Configurations
             builder.Property(p => p.CreatedAt)
                 .IsRequired();
 
+            builder.Property(p => p.WidgetConfigJson)
+                .HasColumnType("jsonb"); // PostgreSQL JSON natif
+
             builder.HasMany(p => p.Feedbacks)
                 .WithOne(f => f.Project)
                 .HasForeignKey(f => f.ProjectId)

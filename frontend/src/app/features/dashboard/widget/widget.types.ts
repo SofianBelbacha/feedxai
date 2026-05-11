@@ -2,6 +2,7 @@ export type WidgetMode = 'floating' | 'inline' | 'both';
 export type WidgetPosition = 'bottom-right' | 'bottom-left';
 
 export interface WidgetConfig {
+    publicToken: string;
     mode: WidgetMode;
     position: WidgetPosition;
     primaryColor: string;
@@ -11,6 +12,7 @@ export interface WidgetConfig {
 }
 
 export const DEFAULT_CONFIG: WidgetConfig = {
+    publicToken:  '',
     mode: 'floating',
     position: 'bottom-right',
     primaryColor: '#3B82F6',
