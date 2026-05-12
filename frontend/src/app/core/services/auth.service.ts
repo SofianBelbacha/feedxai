@@ -1,12 +1,12 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpBackend, HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, BehaviorSubject, throwError, filter, take, switchMap, of } from 'rxjs';
+import { Observable, BehaviorSubject, Subject, throwError, filter, take, switchMap, of } from 'rxjs';
 import { tap, catchError, finalize } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { TokenStorageService } from './token-storage.service';
 import { UserService } from './user.service';
-
+import { DashboardContextService } from './dashboard-context.service';
 
 export interface AuthTokens {
   accessToken: string;
@@ -17,51 +17,49 @@ export interface GoogleAuthResponse extends AuthTokens {
 }
 
 @Injectable({ providedIn: 'root' })
-
 export class AuthService {
-  private readonly http = inject(HttpClient);
-  private readonly rawHttp = new HttpClient(inject(HttpBackend));
-  private readonly router  = inject(Router);
-  private readonly storage = inject(TokenStorageService);
-  private readonly userService = inject(UserService);
+  private readonly http             = inject(HttpClient);
+  private readonly rawHttp          = new HttpClient(inject(HttpBackend));
+  private readonly router           = inject(Router);
+  private readonly storage          = inject(TokenStorageService);
+  private readonly userService      = inject(UserService);
+  private readonly dashboardContext = inject(DashboardContextService);
   private readonly API = environment.apiUrl;
 
-  // ─── Signal public ────────────────────────────────────────
+  // ─── Signals publics ───────────────────────────────────────────────────────
   isAuthenticated = signal(!!this.storage.getAccessToken());
 
-  // ─── Gestion refresh concurrent ───────────────────────────
+  // Émet à chaque logout — les composants/services qui ont des données
+  // en mémoire s'y abonnent pour se vider sans couplage direct.
+  private readonly _logout$ = new Subject<void>();
+  readonly logout$ = this._logout$.asObservable();
+
+  // ─── Refresh concurrent ────────────────────────────────────────────────────
   private isRefreshing = false;
   private refreshSubject = new BehaviorSubject<AuthTokens | null>(null);
 
-  // ─── Auth classique ───────────────────────────────────────
+  // ─── Auth classique ────────────────────────────────────────────────────────
   login(email: string, password: string): Observable<AuthTokens> {
     return this.http
       .post<AuthTokens>(`${this.API}/auth/login`, { email, password }, { withCredentials: true })
       .pipe(tap(tokens => this.saveTokens(tokens)));
   }
 
-  register(
-    email: string,
-    password: string,
-    firstName: string,
-    lastName: string
-  ): Observable<AuthTokens> {
+  register(email: string, password: string, firstName: string, lastName: string): Observable<AuthTokens> {
     return this.http
-      .post<AuthTokens>(`${this.API}/auth/register`,
-        { email, password, firstName, lastName }, { withCredentials: true })
+      .post<AuthTokens>(`${this.API}/auth/register`, { email, password, firstName, lastName }, { withCredentials: true })
       .pipe(tap(tokens => this.saveTokens(tokens)));
   }
 
-  // ─── Google OAuth ─────────────────────────────────────────
+  // ─── Google OAuth ──────────────────────────────────────────────────────────
   loginWithGoogle(idToken: string): Observable<GoogleAuthResponse> {
     return this.http
       .post<GoogleAuthResponse>(`${this.API}/auth/google`, { idToken }, { withCredentials: true })
       .pipe(tap(result => this.saveTokens(result)));
   }
 
-  // ─── Refresh avec queue ───────────────────────────────────
+  // ─── Refresh concurrent ────────────────────────────────────────────────────
   refreshTokens(rawHttp: HttpClient): Observable<AuthTokens> {
-    // Un refresh est déjà en cours — on attend le résultat
     if (this.isRefreshing) {
       return this.refreshSubject.pipe(
         filter(token => token !== null),
@@ -71,21 +69,19 @@ export class AuthService {
     }
 
     this.isRefreshing = true;
-    this.refreshSubject.next(null); // bloque les autres
+    this.refreshSubject.next(null);
 
     return rawHttp
       .post<AuthTokens>(`${this.API}/auth/refresh`, {}, { withCredentials: true })
       .pipe(
         tap(tokens => {
           this.saveTokens(tokens);
-          this.refreshSubject.next(tokens); // débloque la queue
+          this.refreshSubject.next(tokens);
           this.isRefreshing = false;
         }),
         catchError(error => {
           this.isRefreshing = false;
-          // Termine proprement le subject courant
           this.refreshSubject.complete();
-          // Recrée un nouveau subject sain pour les futurs refresh
           this.refreshSubject = new BehaviorSubject<AuthTokens | null>(null);
           this.logout(false);
           return throwError(() => error);
@@ -93,10 +89,14 @@ export class AuthService {
       );
   }
 
-  // ─── Session ──────────────────────────────────────────────
+  // ─── saveTokens — ordre garanti ────────────────────────────────────────────
+  // 1. Persiste le token
+  // 2. userService.refresh() → userId disponible
+  // 3. dashboardContext.loadForUser() → charge la bonne clé localStorage
   saveTokens(tokens: AuthTokens): void {
     this.storage.saveAccessToken(tokens.accessToken);
-    this.userService.refresh(); // ← décode le JWT et met à jour le profil
+    this.userService.refresh();
+    this.dashboardContext.loadForUser();
     this.isAuthenticated.set(true);
   }
 
@@ -104,27 +104,31 @@ export class AuthService {
     return this.storage.getAccessToken();
   }
 
+  // ─── logout — ordre garanti ────────────────────────────────────────────────
+  // 1. clearForCurrentUser() — userId encore dispo pour construire la clé localStorage
+  // 2. userService.clear()   — userId devient null
+  // 3. storage.clearAll()    — tokens supprimés
+  // 4. _logout$.next()       — signal aux composants de vider leurs données
+  // 5. navigate('/login')
   logout(revokeOnServer = true): void {
     const completeLogout = () => {
+      this.dashboardContext.clearForCurrentUser();
+      this.userService.clear();
       this.storage.clearAll();
-      this.userService.clear(); // ← efface le profil
       this.isAuthenticated.set(false);
       this.isRefreshing = false;
       this.refreshSubject.next(null);
+      this._logout$.next();         // ← les composants/services écoutent ça
       this.router.navigate(['/login']);
     };
 
     if (revokeOnServer) {
-      // Fire and forget — cookie envoyé automatiquement
       this.rawHttp
-        .post(
-          `${this.API}/auth/revoke`,
-          { revokeAll: false },
-          { withCredentials: true })
-        .pipe(
-          // Logout local dans tous les cas — succès ou échec du revoke
-          finalize((completeLogout)))
+        .post(`${this.API}/auth/revoke`, { revokeAll: false }, { withCredentials: true })
+        .pipe(finalize(completeLogout))
         .subscribe({ error: () => {} });
+    } else {
+      completeLogout();
     }
   }
 }

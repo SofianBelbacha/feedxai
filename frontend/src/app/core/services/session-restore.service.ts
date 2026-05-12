@@ -8,15 +8,22 @@ export class SessionRestoreService {
   private readonly auth    = inject(AuthService);
   private readonly backend = inject(HttpBackend);
 
-  async restore(): Promise<void> {
-    // Access token déjà en mémoire — pas besoin de refresh
+  private restorePromise: Promise<void> | null = null;
+
+  restore(): Promise<void> {
+    if (this.restorePromise) return this.restorePromise;
+    this.restorePromise = this.doRestore();
+    return this.restorePromise;
+  }
+
+  private async doRestore(): Promise<void> {
     if (this.auth.getAccessToken()) return;
 
     const rawHttp = new HttpClient(this.backend);
 
     await firstValueFrom(
       this.auth.refreshTokens(rawHttp).pipe(
-        catchError(() => of(null)) // pas de cookie valide — utilisateur non connecté
+        catchError(() => of(null))
       )
     );
   }

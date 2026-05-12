@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { Project } from './projects.types';
 import { ProjectsService } from './projects.service';
 import { Router } from '@angular/router';
@@ -7,6 +7,8 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { environment } from '../../../../environments/environment';
 import { DashboardContextService } from '../../../core/services/dashboard-context.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-projects',
@@ -14,27 +16,26 @@ import { DashboardContextService } from '../../../core/services/dashboard-contex
   templateUrl: './projects.html',
   styleUrl: './projects.scss',
 })
-export class Projects implements OnInit {
-  private readonly service = inject(ProjectsService);
-  private readonly router = inject(Router);
-  private readonly userService = inject(UserService);
+export class Projects implements OnInit, OnDestroy {
+  private readonly service          = inject(ProjectsService);
+  private readonly router           = inject(Router);
+  private readonly userService      = inject(UserService);
   private readonly dashboardContext = inject(DashboardContextService);
+  private readonly auth             = inject(AuthService);
+  private logoutSub?: Subscription;
 
   // ─── State ────────────────────────────────────────────────
-  loading = signal(true);
-  error = signal('');
-  projects = signal<Project[]>([]);
-  showModal = signal(false);
-  creating = signal(false);
-  createError = signal('');
-  copiedToken = signal<string | null>(null);
-  showSnippetModal = signal(false);
-  snippetToCopy   = signal('');
-
-
-  // ─── Formulaire création ──────────────────────────────────
-  newName = signal('');
-  newDescription = signal('');
+  loading           = signal(true);
+  error             = signal('');
+  projects          = signal<Project[]>([]);
+  showModal         = signal(false);
+  creating          = signal(false);
+  createError       = signal('');
+  copiedToken       = signal<string | null>(null);
+  showSnippetModal  = signal(false);
+  snippetToCopy     = signal('');
+  newName           = signal('');
+  newDescription    = signal('');
 
   // ─── Computed ─────────────────────────────────────────────
   readonly plan = computed(() => this.userService.profile()?.plan ?? 'Free');
@@ -42,8 +43,8 @@ export class Projects implements OnInit {
   readonly projectLimit = computed(() => {
     switch (this.plan()) {
       case 'Team': return Infinity;
-      case 'Pro': return 10;
-      default: return 1;
+      case 'Pro':  return 10;
+      default:     return 1;
     }
   });
 
@@ -52,11 +53,33 @@ export class Projects implements OnInit {
   );
 
   readonly activeProjects = computed(() =>
-    this.projects().filter(p => p.isActive));
+    this.projects().filter(p => p.isActive)
+  );
 
   // ─── Lifecycle ────────────────────────────────────────────
   ngOnInit(): void {
     this.load();
+
+    // Vide les données en mémoire dès que l'utilisateur se déconnecte.
+    // Le router navigue vers /login ensuite, donc le composant est détruit,
+    // mais ce reset garantit qu'aucune donnée résiduelle n'est visible
+    // pendant la transition (ni lors d'une ré-activation du composant
+    // si le router le réutilise).
+    this.logoutSub = this.auth.logout$.subscribe(() => this.resetState());
+  }
+
+  ngOnDestroy(): void {
+    this.logoutSub?.unsubscribe();
+  }
+
+  private resetState(): void {
+    this.projects.set([]);
+    this.error.set('');
+    this.loading.set(false);
+    this.showModal.set(false);
+    this.creating.set(false);
+    this.createError.set('');
+    this.copiedToken.set(null);
   }
 
   load(): void {
@@ -107,10 +130,7 @@ export class Projects implements OnInit {
 
     this.creating.set(true);
 
-    this.service.create({
-      name,
-      description: this.newDescription().trim()
-    }).subscribe({
+    this.service.create({ name, description: this.newDescription().trim() }).subscribe({
       next: (project) => {
         this.projects.update(list => [project, ...list]);
         this.creating.set(false);
@@ -132,9 +152,7 @@ export class Projects implements OnInit {
   // ─── Navigation vers feedbacks ────────────────────────────
   openFeedbacks(project: Project): void {
     this.dashboardContext.setProject(project);
-    this.router.navigate([
-      '/dashboard/feedbacks'
-    ]);
+    this.router.navigate(['/dashboard/feedbacks']);
   }
 
   // ─── Copier le token public ───────────────────────────────
@@ -151,20 +169,14 @@ export class Projects implements OnInit {
 
   private async writeToClipboard(text: string, projectId: string): Promise<void> {
     try {
-      // API moderne — disponible sur tous les navigateurs récents en HTTPS
       await navigator.clipboard.writeText(text);
       this.onCopied(projectId);
     } catch {
-      // Fallback — ClipboardItem avec permission explicite
       try {
-        const item = new ClipboardItem({
-          'text/plain': new Blob([text], { type: 'text/plain' })
-        });
+        const item = new ClipboardItem({ 'text/plain': new Blob([text], { type: 'text/plain' }) });
         await navigator.clipboard.write([item]);
         this.onCopied(projectId);
       } catch {
-        // Dernier recours — affiche le snippet dans une alerte
-        // pour que l'utilisateur puisse le copier manuellement
         this.showManualCopy(text);
       }
     }
@@ -176,31 +188,21 @@ export class Projects implements OnInit {
   }
 
   private showManualCopy(text: string): void {
-    // Ouvre une modal avec le snippet pour copie manuelle
     this.snippetToCopy.set(text);
     this.showSnippetModal.set(true);
   }
+
   // ─── Helpers ──────────────────────────────────────────────
   getInitials(name: string): string {
-    return name
-      .split(' ')
-      .map(w => w[0] ?? '')
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    return name.split(' ').map(w => w[0] ?? '').join('').toUpperCase().slice(0, 2);
   }
 
   getProjectColor(id: string): string {
-    const colors = [
-      '#3B82F6', '#8B5CF6', '#EC4899',
-      '#F59E0B', '#10B981', '#F43F5E',
-    ];
-    const index = id.charCodeAt(0) % colors.length;
-    return colors[index];
+    const colors = ['#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#F43F5E'];
+    return colors[id.charCodeAt(0) % colors.length];
   }
 
   trackById(_: number, item: Project): string {
     return item.id;
   }
 }
-

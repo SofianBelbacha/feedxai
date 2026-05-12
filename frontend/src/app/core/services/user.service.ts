@@ -1,4 +1,3 @@
-// src/app/core/services/user.service.ts
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { TokenStorageService } from './token-storage.service';
 
@@ -14,10 +13,13 @@ export interface UserProfile {
 export class UserService {
   private readonly storage = inject(TokenStorageService);
 
-  // Signal dérivé du JWT
   private readonly _profile = signal<UserProfile | null>(this.decodeProfile());
 
   readonly profile  = this._profile.asReadonly();
+
+  // ─── Expose userId en lecture directe (utilisé par DashboardContextService) ──
+  readonly userId = computed(() => this._profile()?.id ?? null);
+
   readonly fullName = computed(() => {
     const p = this._profile();
     if (!p) return '';
@@ -30,7 +32,6 @@ export class UserService {
     return `${p.firstName[0] ?? ''}${p.lastName[0] ?? ''}`.toUpperCase();
   });
 
-  // Appelé après saveTokens
   refresh(): void {
     this._profile.set(this.decodeProfile());
   }
@@ -46,7 +47,6 @@ export class UserService {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
 
-      // Claims .NET — noms longs pour NameIdentifier et Email
       const id = payload[
         'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'
       ] ?? payload.sub ?? '';
@@ -55,7 +55,6 @@ export class UserService {
         'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'
       ] ?? payload.email ?? '';
 
-      // Claims custom — noms courts directs
       return {
         id,
         email,

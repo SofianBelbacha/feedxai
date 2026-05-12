@@ -6,6 +6,7 @@ import { FeedbacksService } from './feedbacks.service';
 import { Feedback, FeedbackCategory, FeedbackFilters, FeedbackPriority, FeedbackStatus } from './feedbacks.types';
 import { UserService } from '../../../core/services/user.service';
 import { DashboardContextService } from '../../../core/services/dashboard-context.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-feedbacks',
@@ -14,56 +15,52 @@ import { DashboardContextService } from '../../../core/services/dashboard-contex
   styleUrl: './feedbacks.scss',
 })
 export class Feedbacks implements OnInit, OnDestroy {
-  private readonly service = inject(FeedbacksService);
+  private readonly service          = inject(FeedbacksService);
+  private readonly userService      = inject(UserService);
+  private readonly dashboardContext = inject(DashboardContextService);
+  private readonly auth             = inject(AuthService);
+
   private readonly search$ = new Subject<string>();
   private pollSub?: Subscription;
-  private readonly userService = inject(UserService);
-  private readonly dashboardContext = inject(DashboardContextService);
-  readonly isPro = computed(() =>
-    this.userService.profile()?.plan !== 'Free'
-  );
+  private logoutSub?: Subscription;
+
+  readonly isPro = computed(() => this.userService.profile()?.plan !== 'Free');
 
   // ─── State ────────────────────────────────────────────────
-  loading = signal(true);
-  error = signal('');
-  feedbacks = signal<Feedback[]>([]);
-  totalCount = signal(0);
-  dragging = signal<Feedback | null>(null);
-  exporting = signal(false);
+  loading       = signal(true);
+  error         = signal('');
+  feedbacks     = signal<Feedback[]>([]);
+  totalCount    = signal(0);
+  dragging      = signal<Feedback | null>(null);
+  exporting     = signal(false);
 
   // ─── Filtres ──────────────────────────────────────────────
-  searchValue = signal('');
+  searchValue    = signal('');
   categoryFilter = signal<FeedbackCategory | ''>('');
   priorityFilter = signal<FeedbackPriority | ''>('');
-  currentPage = signal(1);
-  readonly pageSize = 50; // charge beaucoup pour le kanban
+  currentPage    = signal(1);
+  readonly pageSize = 50;
 
   // ─── Colonnes kanban ──────────────────────────────────────
   readonly columns: { status: FeedbackStatus; label: string; color: string }[] = [
-    { status: 'Todo', label: 'À traiter', color: 'amber' },
-    { status: 'InProgress', label: 'En cours', color: 'violet' },
-    { status: 'Done', label: 'Résolus', color: 'emerald' },
+    { status: 'Todo',       label: 'À traiter', color: 'amber'   },
+    { status: 'InProgress', label: 'En cours',  color: 'violet'  },
+    { status: 'Done',       label: 'Résolus',   color: 'emerald' },
   ];
 
-  readonly todoFeedbacks = computed(() =>
-    this.feedbacks().filter(f => f.status === 'Todo'));
-  readonly inProgressFeedbacks = computed(() =>
-    this.feedbacks().filter(f => f.status === 'InProgress'));
-  readonly doneFeedbacks = computed(() =>
-    this.feedbacks().filter(f => f.status === 'Done'));
+  readonly todoFeedbacks       = computed(() => this.feedbacks().filter(f => f.status === 'Todo'));
+  readonly inProgressFeedbacks = computed(() => this.feedbacks().filter(f => f.status === 'InProgress'));
+  readonly doneFeedbacks       = computed(() => this.feedbacks().filter(f => f.status === 'Done'));
+  readonly hasActiveFilters    = computed(() =>
+    !!this.searchValue() || !!this.categoryFilter() || !!this.priorityFilter()
+  );
 
-  // ─── Computed filtres actifs ──────────────────────────────
-  readonly hasActiveFilters = computed(() =>
-    !!this.searchValue() || !!this.categoryFilter() || !!this.priorityFilter());
-
-  // ─── Enums pour le template ───────────────────────────────
-  readonly categories: FeedbackCategory[] = [
-    'Bug', 'FeatureRequest', 'Question', 'Uncategorized'];
-  readonly priorities: FeedbackPriority[] = [
-    'Critical', 'High', 'Normal', 'Low'];
-
+  readonly categories: FeedbackCategory[] = ['Bug', 'FeatureRequest', 'Question', 'Uncategorized'];
+  readonly priorities: FeedbackPriority[] = ['Critical', 'High', 'Normal', 'Low'];
 
   constructor() {
+    // Re-charge quand le projet actif change (ex. : changement de projet
+    // dans la sidebar, ou chargement du bon projet après login).
     effect(() => {
       const project = this.dashboardContext.selectedProject();
 
@@ -81,18 +78,35 @@ export class Feedbacks implements OnInit, OnDestroy {
 
   // ─── Lifecycle ────────────────────────────────────────────
   ngOnInit(): void {
-    this.search$.pipe(
-      debounceTime(300),
-      distinctUntilChanged()
-    ).subscribe(() => {
-      this.currentPage.set(1);
-      this.load();
-    });
+    this.search$.pipe(debounceTime(300), distinctUntilChanged())
+      .subscribe(() => {
+        this.currentPage.set(1);
+        this.load();
+      });
+
+    // Vide tout en mémoire au logout : arrête le polling,
+    // efface les données, évite tout flash de l'ancien compte.
+    this.logoutSub = this.auth.logout$.subscribe(() => this.resetState());
   }
 
   ngOnDestroy(): void {
     this.pollSub?.unsubscribe();
+    this.logoutSub?.unsubscribe();
     this.search$.complete();
+  }
+
+  private resetState(): void {
+    this.pollSub?.unsubscribe();
+    this.pollSub = undefined;
+    this.feedbacks.set([]);
+    this.totalCount.set(0);
+    this.loading.set(false);
+    this.error.set('');
+    this.searchValue.set('');
+    this.categoryFilter.set('');
+    this.priorityFilter.set('');
+    this.dragging.set(null);
+    this.exporting.set(false);
   }
 
   // ─── Chargement ───────────────────────────────────────────
@@ -113,10 +127,10 @@ export class Feedbacks implements OnInit, OnDestroy {
     this.error.set('');
 
     const filters: FeedbackFilters = {
-      search: this.searchValue(),
+      search:   this.searchValue(),
       category: this.categoryFilter() || undefined,
       priority: this.priorityFilter() || undefined,
-      page: this.currentPage(),
+      page:     this.currentPage(),
       pageSize: this.pageSize,
     };
 
@@ -137,17 +151,16 @@ export class Feedbacks implements OnInit, OnDestroy {
   // ─── Polling IA ───────────────────────────────────────────
   private startPollingIfNeeded(): void {
     const hasPending = this.feedbacks().some(
-      f => f.aiAnalysisStatus === 'Pending' ||
-        f.aiAnalysisStatus === 'Processing'
+      f => f.aiAnalysisStatus === 'Pending' || f.aiAnalysisStatus === 'Processing'
     );
 
     if (!hasPending || this.pollSub) return;
 
     const filters: FeedbackFilters = {
-      search: this.searchValue(),
+      search:   this.searchValue(),
       category: this.categoryFilter() || undefined,
       priority: this.priorityFilter() || undefined,
-      page: this.currentPage(),
+      page:     this.currentPage(),
       pageSize: this.pageSize,
     };
 
@@ -155,15 +168,14 @@ export class Feedbacks implements OnInit, OnDestroy {
       switchMap(() => this.service.getAll(this.projectId, filters)),
       takeWhile(result =>
         result.data.some(f =>
-          f.aiAnalysisStatus === 'Pending' ||
-          f.aiAnalysisStatus === 'Processing'
-        ), true)
+          f.aiAnalysisStatus === 'Pending' || f.aiAnalysisStatus === 'Processing'
+        ), true
+      )
     ).subscribe({
       next: (result) => {
         this.feedbacks.set(result.data);
         const stillPending = result.data.some(
-          f => f.aiAnalysisStatus === 'Pending' ||
-            f.aiAnalysisStatus === 'Processing'
+          f => f.aiAnalysisStatus === 'Pending' || f.aiAnalysisStatus === 'Processing'
         );
         if (!stillPending) {
           this.pollSub?.unsubscribe();
@@ -199,70 +211,47 @@ export class Feedbacks implements OnInit, OnDestroy {
     this.load();
   }
 
-  // ─── Drag & Drop ─────────────────────────────────────────
-  onDragStart(feedback: Feedback): void {
-    this.dragging.set(feedback);
-  }
-
-  onDragEnd(): void {
-    this.dragging.set(null);
-  }
+  // ─── Drag & Drop ──────────────────────────────────────────
+  onDragStart(feedback: Feedback): void { this.dragging.set(feedback); }
+  onDragEnd(): void { this.dragging.set(null); }
+  onDragOver(event: DragEvent): void { event.preventDefault(); }
 
   onDrop(status: FeedbackStatus): void {
     const fb = this.dragging();
-    if (!fb || fb.status === status) {
-      this.dragging.set(null);
-      return;
-    }
+    if (!fb || fb.status === status) { this.dragging.set(null); return; }
 
-    // Optimistic update
-    this.feedbacks.update(list =>
-      list.map(f => f.id === fb.id ? { ...f, status } : f)
-    );
+    this.feedbacks.update(list => list.map(f => f.id === fb.id ? { ...f, status } : f));
     this.dragging.set(null);
 
     this.service.updateStatus(this.projectId, fb.id, status).subscribe({
       error: () => {
-        // Rollback si erreur
-        this.feedbacks.update(list =>
-          list.map(f => f.id === fb.id ? { ...f, status: fb.status } : f)
-        );
+        this.feedbacks.update(list => list.map(f => f.id === fb.id ? { ...f, status: fb.status } : f));
         this.error.set('Impossible de mettre à jour le statut.');
       }
     });
   }
 
-  onDragOver(event: DragEvent): void {
-    event.preventDefault(); // autorise le drop
-  }
-
   // ─── Helpers ──────────────────────────────────────────────
   getCategoryLabel(category: string): string {
     const map: Record<string, string> = {
-      Bug: '🐛 Bug',
-      FeatureRequest: '✨ Feature',
-      Question: '❓ Question',
-      Uncategorized: '📝 Autre',
+      Bug: '🐛 Bug', FeatureRequest: '✨ Feature',
+      Question: '❓ Question', Uncategorized: '📝 Autre',
     };
     return map[category] ?? category;
   }
 
   getCategoryFilterLabel(category: string): string {
     const map: Record<string, string> = {
-      Bug: '🐛 Bug',
-      FeatureRequest: '✨ Fonctionnalité',
-      Question: '❓ Question',
-      Uncategorized: '📝 Non catégorisé',
+      Bug: '🐛 Bug', FeatureRequest: '✨ Fonctionnalité',
+      Question: '❓ Question', Uncategorized: '📝 Non catégorisé',
     };
     return map[category] ?? category;
   }
 
   getPriorityLabel(priority: string): string {
     const map: Record<string, string> = {
-      Critical: '🔴 Critique',
-      High: '🟠 Haute',
-      Normal: '🔵 Normale',
-      Low: '⚪ Basse',
+      Critical: '🔴 Critique', High: '🟠 Haute',
+      Normal: '🔵 Normale', Low: '⚪ Basse',
     };
     return map[priority] ?? priority;
   }
@@ -271,9 +260,7 @@ export class Feedbacks implements OnInit, OnDestroy {
     return this.feedbacks().filter(f => f.status === status);
   }
 
-  trackById(_: number, item: Feedback): string {
-    return item.id;
-  }
+  trackById(_: number, item: Feedback): string { return item.id; }
 
   exportCsv(): void {
     if (this.exporting()) return;
@@ -282,33 +269,26 @@ export class Feedbacks implements OnInit, OnDestroy {
     const filters = {
       category: this.categoryFilter() || undefined,
       priority: this.priorityFilter() || undefined,
-      status: undefined, // export tout si pas de filtre statut
+      status: undefined,
     };
 
     this.service.exportCsv(this.projectId, filters).subscribe({
       next: (blob) => {
-        // Crée un lien de téléchargement temporaire
-        const url = URL.createObjectURL(blob);
+        const url  = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        const fileName = `feedbacks_${new Date().toISOString().slice(0, 10)}.csv`;
-
         link.href = url;
-        link.download = fileName;
+        link.download = `feedbacks_${new Date().toISOString().slice(0, 10)}.csv`;
         link.click();
-
-        // Nettoyage
         URL.revokeObjectURL(url);
         this.exporting.set(false);
       },
       error: (err) => {
         this.exporting.set(false);
-
-        if (err.status === 403) {
-          this.error.set(
-            'L\'export CSV est disponible à partir du plan Pro.');
-        } else {
-          this.error.set('Erreur lors de l\'export. Réessayez.');
-        }
+        this.error.set(
+          err.status === 403
+            ? 'L\'export CSV est disponible à partir du plan Pro.'
+            : 'Erreur lors de l\'export. Réessayez.'
+        );
       }
     });
   }
