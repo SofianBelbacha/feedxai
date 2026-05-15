@@ -1,0 +1,60 @@
+  <!-- =============================================
+      PRICING
+      ============================================= -->
+  <section class="pricing">
+    <div class="container">
+
+      <div class="pricing__header">
+        <h2 class="pricing__title">Un tarif simple,<br>pas de surprises</h2>
+        <p class="pricing__subtitle">
+          Commencez gratuitement. Évoluez quand vous en avez besoin.
+          Pas d'engagement, annulation à tout moment.
+        </p>
+      </div>
+
+      <div class="pricing__grid">
+        @for (plan of plans; track plan.id) {
+        <div class="pricing-card" [class.pricing-card--featured]="plan.featured">
+
+          @if (plan.featured) {
+          <div class="pricing-card__badge">Le plus populaire</div>
+          }
+
+          <div class="pricing-card__header">
+            <h3 class="pricing-card__name">{{ plan.name }}</h3>
+            <div class="pricing-card__price">
+              @if (plan.price === 0) {
+              <span class="pricing-card__amount">Gratuit</span>
+              } @else {
+              <span class="pricing-card__amount">{{ plan.price }}€</span>
+              <span class="pricing-card__period">/ mois</span>
+              }
+            </div>
+            <p class="pricing-card__description">{{ plan.description }}</p>
+          </div>
+
+          <a [routerLink]="plan.ctaPath" class="pricing-card__cta" [class.pricing-card__cta--primary]="plan.featured"
+            [class.pricing-card__cta--secondary]="!plan.featured">
+            {{ plan.cta }}
+          </a>
+
+          <div class="pricing-card__divider"></div>
+
+          <ul class="pricing-card__features">
+            @for (feature of plan.features; track feature) {
+            <li class="pricing-card__feature">
+              <svg class="pricing-card__check" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="2.5 8 6 11.5 13.5 4" />
+              </svg>
+              {{ feature }}
+            </li>
+            }
+          </ul>
+
+        </div>
+        }
+      </div>
+
+    </div>
+  </section>

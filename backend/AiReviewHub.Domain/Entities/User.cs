@@ -20,6 +20,7 @@ namespace AiReviewHub.Domain.Entities
         public Plan Plan { get; private set; }
         public DateTime CreatedAt { get; private set; }
         public DateTime? UpdatedAt { get; private set; }
+        public string? StripeCustomerId { get; private set; }
 
         public ICollection<Project> Projects { get; private set; } = [];
 
@@ -122,6 +123,13 @@ namespace AiReviewHub.Domain.Entities
             Plan = plan;
             UpdatedAt = dateTimeProvider.UtcNow;
         }
+
+        public void SetStripeCustomerId(string customerId, IDateTimeProvider dateTimeProvider)
+        {
+            StripeCustomerId = customerId;
+            UpdatedAt = dateTimeProvider.UtcNow;
+        }
+
     }
 
 }

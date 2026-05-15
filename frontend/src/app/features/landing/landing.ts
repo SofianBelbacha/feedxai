@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Footer } from '../../shared/components/footer/footer';
 import { Navbar } from '../../shared/components/navbar/navbar';
+import { Pricing } from '../../shared/components/pricing/pricing';
 
 
 export interface ProblemItem {
@@ -49,18 +50,6 @@ export interface VideoFeature {
   accent: string;
 }
 
-export interface PricingPlan {
-  id: string;
-  name: string;
-  price: number | null;
-  priceLabel?: string;
-  description: string;
-  cta: string;
-  ctaPath: string;
-  featured: boolean;
-  features: string[];
-}
-
 export interface FaqItem {
   id: string;
   question: string;
@@ -70,7 +59,7 @@ export interface FaqItem {
 
 @Component({
   selector: 'app-landing',
-  imports: [CommonModule, RouterLink, Navbar, Footer],
+  imports: [CommonModule, RouterLink, Navbar, Footer, Pricing],
   templateUrl: './landing.html',
   styleUrl: './landing.scss',
 })
@@ -259,69 +248,6 @@ export class Landing {
       videoSrc: 'https://bytescale.mobbin.com/FW25bBB/video/mobbin.com/prod/assets/file.mp4?enc=1.BQnbdJK6.fzCCFro2Ta7vlIT3.8j-Yv5SpGXhrOEjiHLg2es1HzA05kSarikmKP2VM7Hu4AlUdpwBVz5E3RzoP5F272sFHC5e_dEit9W7R6EAMre_8XTGFsZBkWBabNoKIqOpdwawNYB1rig9CAyyw7VZdhQLhRRyjd3CxljNVb67mUUCiRQk1NMuDM-bHL4JR46jkG6y8r-pSEjcNW2QleZn7f-nTy1qGYZpO0qF2P97js89b-3js2BdIZLd7jbJ0wRW0yn-gf_dZaxGFm6U2OtXcR3Q6zMXjOCgxxV4mCB1N70uTwLKE1WYfrFhtqzLyfs_LZcU08-ppMR_Lu7Q',
     },
   ];
-
-
-  // -----------------------------------------------
-  // Pricing
-  // -----------------------------------------------
-  plans: PricingPlan[] = [
-    {
-      id: 'free',
-      name: 'Free',
-      price: 0,
-      description: 'Pour tester la valeur du produit sans engagement.',
-      cta: 'Commencer gratuitement',
-      ctaPath: '/register',
-      featured: false,
-      features: [
-        '1 projet actif',
-        '50 feedbacks / mois',
-        'Analyse IA (catégorie + résumé)',
-        'Tableau kanban',
-        'Widget intégrable',
-        'Support par email',
-      ],
-    },
-    {
-      id: 'pro',
-      name: 'Pro',
-      price: 9,
-      description: 'Pour les freelances et indépendants qui gèrent plusieurs clients.',
-      cta: 'Passer au Pro',
-      ctaPath: '/register?plan=pro',
-      featured: true,
-      features: [
-        '10 projets actifs',
-        'Feedbacks illimités',
-        'Analyse IA complète + score de priorité',
-        'Tableau kanban + filtres avancés',
-        'Widget intégrable personnalisable',
-        'Graphique de tendances 30 jours',
-        'Export CSV',
-        'Support prioritaire',
-      ],
-    },
-    {
-      id: 'team',
-      name: 'Team',
-      price: 29,
-      description: 'Pour les agences qui travaillent en équipe sur les mêmes projets.',
-      cta: 'Contacter l\'équipe',
-      ctaPath: '/contact',
-      featured: false,
-      features: [
-        'Projets illimités',
-        'Feedbacks illimités',
-        'Tout le plan Pro',
-        'Membres d\'équipe illimités',
-        'Gestion des rôles & permissions',
-        'Tableau de bord partagé',
-        'Intégrations (Slack, Notion…)',
-        'Support dédié + onboarding',
-      ],
-    },
-  ];
-
 
   // -----------------------------------------------
   // FAQ — état d'ouverture géré avec un signal

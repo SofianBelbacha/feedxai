@@ -133,7 +133,7 @@ public class FeedbackAnalysisJob
             );
 
             await SaveChangesAsync();
-            await _quotaService.IncrementAsync(user.Id);
+            await _quotaService.IncrementAsync(user!.Id);
 
             _logger.LogInformation(
                 "[AI] Feedback {FeedbackId} analyzed successfully — " +

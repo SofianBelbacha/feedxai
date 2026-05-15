@@ -1,0 +1,113 @@
+<!-- frontend/src/app/features/dashboard/billing/billing.html -->
+<div class="billing">
+
+  <header class="billing__header">
+    <div>
+      <h1 class="billing__title">Abonnement & facturation</h1>
+      <p class="billing__subtitle">
+        Plan actuel : <strong>{{ currentPlan() }}</strong>
+      </p>
+    </div>
+
+    @if (isPro()) {
+      <button class="billing__portal-btn"
+              [disabled]="portalLoading()"
+              (click)="openPortal()">
+        @if (portalLoading()) {
+          <span class="billing__spinner"></span>Chargement…
+        } @else {
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="12" height="10" rx="1.5"/>
+            <line x1="2" y1="6" x2="14" y2="6"/>
+            <line x1="5" y1="9.5" x2="7" y2="9.5"/>
+          </svg>
+          Gérer ma facturation
+        }
+      </button>
+    }
+  </header>
+
+  <!-- Alertes -->
+  @if (successMessage()) {
+    <div class="billing__alert billing__alert--success">{{ successMessage() }}</div>
+  }
+  @if (errorMessage()) {
+    <div class="billing__alert billing__alert--error">{{ errorMessage() }}</div>
+  }
+
+  <!-- Plans -->
+  <div class="billing__plans">
+    @for (plan of plans; track plan.id) {
+      <div class="billing-plan"
+           [class.billing-plan--highlight]="plan.highlight"
+           [class.billing-plan--active]="isPlanActive(plan.id)">
+
+        @if (plan.highlight) {
+          <span class="billing-plan__badge">Recommandé</span>
+        }
+        @if (isPlanActive(plan.id)) {
+          <span class="billing-plan__badge billing-plan__badge--active">Plan actuel</span>
+        }
+
+        <div class="billing-plan__header">
+          <h2 class="billing-plan__name">{{ plan.name }}</h2>
+          <div class="billing-plan__price">
+            <span class="billing-plan__amount">{{ plan.price }}</span>
+            <span class="billing-plan__period">{{ plan.period }}</span>
+          </div>
+          <p class="billing-plan__desc">{{ plan.description }}</p>
+        </div>
+
+        <ul class="billing-plan__features">
+          @for (feature of plan.features; track feature) {
+            <li class="billing-plan__feature">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="2.5 8 6 11.5 13.5 4"/>
+              </svg>
+              {{ feature }}
+            </li>
+          }
+        </ul>
+
+        <button class="billing-plan__cta"
+                [class.billing-plan__cta--primary]="plan.highlight && !isPlanActive(plan.id)"
+                [class.billing-plan__cta--current]="isPlanActive(plan.id)"
+                [disabled]="isPlanActive(plan.id) || loading()"
+                (click)="upgrade(plan.priceId)">
+          @if (loading() && !isPlanActive(plan.id) && plan.priceId) {
+            <span class="billing__spinner"></span>
+          }
+          @if (isPlanActive(plan.id)) { Plan actuel }
+          @else { {{ plan.cta }} }
+        </button>
+
+      </div>
+    }
+  </div>
+
+  <!-- FAQ rapide -->
+  <div class="billing__faq">
+    <h3 class="billing__faq-title">Questions fréquentes</h3>
+    <div class="billing__faq-grid">
+      <div class="billing__faq-item">
+        <strong>Puis-je annuler à tout moment ?</strong>
+        <p>Oui, sans engagement. Votre accès Pro reste actif jusqu'à la fin de la période facturée.</p>
+      </div>
+      <div class="billing__faq-item">
+        <strong>Quels moyens de paiement sont acceptés ?</strong>
+        <p>Carte bancaire (Visa, Mastercard, Amex) via Stripe. Vos données de paiement ne transitent jamais par nos serveurs.</p>
+      </div>
+      <div class="billing__faq-item">
+        <strong>Que se passe-t-il si je dépasse les limites Free ?</strong>
+        <p>Vous ne pouvez plus soumettre de nouveaux feedbacks. Vos données existantes sont conservées.</p>
+      </div>
+      <div class="billing__faq-item">
+        <strong>Comment obtenir une facture ?</strong>
+        <p>Toutes vos factures sont accessibles depuis le portail de facturation Stripe en cliquant sur "Gérer ma facturation".</p>
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -57,6 +57,13 @@ namespace AiReviewHub.Infrastructure.Persistence.Configurations
             builder.Property(u => u.CreatedAt)
                 .IsRequired();
 
+            builder.Property(u => u.StripeCustomerId)
+                .HasMaxLength(100);
+
+            builder.HasIndex(u => u.StripeCustomerId)
+                .IsUnique()
+                .HasFilter("\"StripeCustomerId\" IS NOT NULL");
+
             builder.HasMany(u => u.Projects)
                 .WithOne(p => p.User)
                 .HasForeignKey(p => p.UserId)

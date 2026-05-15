@@ -2047,7 +2047,6 @@
   .problem__title { font-size: 40px; }
   .problem__grid  { grid-template-columns: 1fr 1fr; }
   .features__title      { font-size: 40px; }
-  .pricing__title       { font-size: 40px; }
   .faq__title           { font-size: 32px; }
   .faq__layout          { grid-template-columns: 240px 1fr; gap: 40px; }
   .cta__title           { font-size: 36px; }
@@ -2082,14 +2081,7 @@
   .vf__item--even .vf__caption { order: unset; }
   .vf__caption         { text-align: center; }
   .vf__caption-desc    { margin-inline: auto; }
- 
-  .pricing              { padding: 64px 0; }
-  .pricing__header      { margin-bottom: 40px; }
-  .pricing__title       { font-size: 32px; }
-  .pricing__subtitle    { font-size: 16px; }
-  .pricing__grid        { grid-template-columns: 1fr; }
-  .pricing-card--featured { transform: none; }
- 
+  
   .faq                  { padding: 64px 0; }
   .faq__layout          { grid-template-columns: 1fr; gap: 32px; }
   .faq__aside           { position: static; }

@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
         services.AddScoped<IFeedbackAnalysisQueue, HangfireFeedbackAnalysisQueue>();
+        services.AddScoped<IStripeService, StripeService>();
 
         // ─── OpenAI — singletons (réutilise les sockets HTTP) ─
         var openAiKey = configuration["OpenAI:ApiKey"]
