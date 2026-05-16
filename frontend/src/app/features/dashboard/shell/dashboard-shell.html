@@ -153,7 +153,7 @@
           }
         </a>
       }
-            <a routerLink="/dashboard/billing"
+      <a routerLink="/dashboard/billing"
         routerLinkActive="sidebar__nav-item--active"
         class="sidebar__nav-item"
         [class.sidebar__nav-item--collapsed]="sidebarCollapsed()">
@@ -169,6 +169,34 @@
           <span class="sidebar__nav-label">Abonnement</span>
         }
       </a>
+
+      @if (quota()) {
+        <div class="sidebar__quota">
+          <div class="sidebar__quota-label">
+            <span>Feedbacks ce mois</span>
+            <span class="sidebar__quota-count">
+              @if (quota()!.feedbacksLimit === -1) {
+                {{ quota()!.feedbacksThisMonth }} / ∞
+              } @else {
+                {{ quota()!.feedbacksThisMonth }} / {{ quota()!.feedbacksLimit }}
+              }
+            </span>
+          </div>
+          <div class="sidebar__quota-bar">
+            <div
+              class="sidebar__quota-fill"
+              [style.width.%]="quota()!.usagePercent"
+              [class.sidebar__quota-fill--warning]="quota()!.usagePercent >= 80"
+              [class.sidebar__quota-fill--danger]="quota()!.usagePercent >= 100">
+            </div>
+          </div>
+          @if (quota()!.usagePercent >= 80 && quota()!.feedbacksLimit !== -1) {
+            <a routerLink="/dashboard/billing" class="sidebar__quota-upgrade">
+              Passer au Pro →
+            </a>
+          }
+        </div>
+      }
 
       <!-- Profil utilisateur -->
       <div class="sidebar__user" [class.sidebar__user--collapsed]="sidebarCollapsed()">

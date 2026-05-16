@@ -1,9 +1,10 @@
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, HostListener, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserService } from '../../../core/services/user.service';
 import { DashboardContextService } from '../../../core/services/dashboard-context.service';
+import { BillingService, QuotaResult } from '../../../shared/components/billing/billing.service';
 
 interface NavItem {
   label: string;
@@ -18,40 +19,43 @@ interface NavItem {
   templateUrl: './dashboard-shell.html',
   styleUrl: './dashboard-shell.scss',
 })
-export class DashboardShell {
-  private readonly auth            = inject(AuthService);
-  private readonly userService     = inject(UserService);
+export class DashboardShell implements OnInit {
+  private readonly auth = inject(AuthService);
+  private readonly userService = inject(UserService);
   private readonly dashboardContext = inject(DashboardContextService);
+  private readonly billingService = inject(BillingService);
 
-  readonly profile        = this.userService.profile;
-  readonly fullName       = this.userService.fullName;
-  readonly initials       = this.userService.initials;
+  readonly profile = this.userService.profile;
+  readonly fullName = this.userService.fullName;
+  readonly initials = this.userService.initials;
   readonly currentProject = this.dashboardContext.selectedProject;
-  readonly currentPlan    = this.dashboardContext.plan;
+  readonly currentPlan = this.dashboardContext.plan;
 
   sidebarCollapsed = signal(false);
-  mobileMenuOpen   = signal(false);
-  logoutLoading    = signal(false);
+  mobileMenuOpen = signal(false);
+  logoutLoading = signal(false);
+  quota = signal<QuotaResult | null>(null);
 
   navItems: NavItem[] = [
-    { label: 'Vue d\'ensemble', path: '/dashboard',           icon: 'home'     },
-    { label: 'Projets',         path: '/dashboard/projects',  icon: 'folder', badge: 3  },
-    { label: 'Feedbacks',       path: '/dashboard/feedbacks', icon: 'messages', badge: 12 },
-    { label: 'Tendances',       path: '/dashboard/trends',    icon: 'chart'    },
-    { label: 'Widget',          path: '/dashboard/widget',    icon: 'code'     },
+    { label: 'Vue d\'ensemble', path: '/dashboard', icon: 'home' },
+    { label: 'Projets', path: '/dashboard/projects', icon: 'folder', badge: 3 },
+    { label: 'Feedbacks', path: '/dashboard/feedbacks', icon: 'messages', badge: 12 },
+    { label: 'Tendances', path: '/dashboard/trends', icon: 'chart' },
+    { label: 'Widget', path: '/dashboard/widget', icon: 'code' },
   ];
 
   bottomNavItems: NavItem[] = [
     { label: 'Paramètres', path: '/dashboard/settings', icon: 'settings' },
-    { label: 'Aide',       path: '/dashboard/help',     icon: 'help'     },
+    { label: 'Aide', path: '/dashboard/help', icon: 'help' },
   ];
 
-  // ─── Logout ────────────────────────────────────────────────────────────────
-  //
-  // Le shell ne gère plus clearProject() manuellement.
-  // AuthService.logout() → completeLogout() s'occupe de tout dans le bon ordre :
-  //   clearForCurrentUser → userService.clear → storage.clearAll → navigate
-  //
+  ngOnInit(): void {
+    this.billingService.getQuota().subscribe({
+      next: quota => this.quota.set(quota),
+      error: () => { /* silencieux — la sidebar reste sans barre de quota */ }
+    });
+  }
+
   logout(): void {
     if (this.logoutLoading()) return;
     this.logoutLoading.set(true);

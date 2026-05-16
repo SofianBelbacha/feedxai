@@ -19,6 +19,7 @@ public class CreateFeedbackHandler : IRequestHandler<CreateFeedbackCommand, Crea
     private readonly IMapper _mapper;
     private readonly ILogger<CreateFeedbackHandler> _logger;
     private readonly IFeedbackAnalysisQueue _analysisQueue; // interface Application
+    private readonly IPlanLimitsService _planLimits;
 
 
     public CreateFeedbackHandler(
@@ -27,7 +28,8 @@ public class CreateFeedbackHandler : IRequestHandler<CreateFeedbackCommand, Crea
         ICurrentUserService currentUser,
         IMapper mapper,
         ILogger<CreateFeedbackHandler> logger,
-        IFeedbackAnalysisQueue analysisQueue)
+        IFeedbackAnalysisQueue analysisQueue,
+        IPlanLimitsService planLimits)
     {
         _context = context;
         _dateTimeProvider = dateTimeProvider;
@@ -35,6 +37,7 @@ public class CreateFeedbackHandler : IRequestHandler<CreateFeedbackCommand, Crea
         _mapper = mapper;
         _logger = logger;
         _analysisQueue = analysisQueue;
+        _planLimits = planLimits;
     }
 
     public async Task<CreateFeedbackResult> Handle(
@@ -50,6 +53,21 @@ public class CreateFeedbackHandler : IRequestHandler<CreateFeedbackCommand, Crea
                 p.IsActive,
                 cancellationToken)
             ?? throw new NotFoundException("Project not found or inactive");
+
+        // ── Vérification du quota mensuel ─────────────────────
+        var canSubmit = await _planLimits.CanSubmitFeedbackAsync(
+            _currentUser.UserId,
+            project.User.Plan,
+            cancellationToken);
+
+        if (!canSubmit)
+        {
+            var limits = _planLimits.GetLimits(project.User.Plan);
+            throw new ForbiddenException(
+                $"Monthly feedback limit reached ({limits.MaxFeedbacksPerMonth} feedbacks/month " +
+                $"on the {project.User.Plan} plan). Please upgrade to continue.");
+        }
+
 
         // Crée le feedback via le Domain
         var feedback = Feedback.Create(

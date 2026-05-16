@@ -23,6 +23,10 @@ services:
       - Google__ClientId=${GOOGLE_CLIENT_ID}
       - Google__ClientSecret=${GOOGLE_CLIENT_SECRET}
       - OpenAI__ApiKey=${OPENAI_API_KEY}
+      - Stripe__SecretKey=${STRIPE_SECRET_KEY}
+      - Stripe__WebhookSecret=${STRIPE_WEBHOOK_SECRET}
+      - Stripe__Price__Pro=${STRIPE_PRICE_PRO}
+      - Stripe__Price__Team=${STRIPE_PRICE_TEAM}
     develop:
       watch:
         - action: sync

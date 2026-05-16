@@ -5,6 +5,15 @@ import { environment } from '../../../../environments/environment';
 
 export interface CheckoutSessionResponse { url: string; }
 export interface BillingPortalResponse   { url: string; }
+export interface QuotaResult {
+  plan: string;
+  feedbacksThisMonth: number;
+  feedbacksLimit: number;
+  projectCount: number;
+  projectsLimit: number;
+  usagePercent: number;
+}
+
 
 @Injectable({ providedIn: 'root' })
 export class BillingService {
@@ -23,4 +32,9 @@ export class BillingService {
     const returnUrl = `${window.location.origin}/dashboard/billing`;
     return this.http.post<BillingPortalResponse>(`${this.api}/portal`, { returnUrl });
   }
+
+  getQuota(): Observable<QuotaResult> {
+    return this.http.get<QuotaResult>(`${environment.apiUrl}/quota`);
+  }
+
 }

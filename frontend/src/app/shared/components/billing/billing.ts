@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { BillingService } from './billing.service';
 import { UserService } from '../../../core/services/user.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-billing',
@@ -15,18 +16,18 @@ import { UserService } from '../../../core/services/user.service';
 })
 export class Billing implements OnInit {
   private readonly billing = inject(BillingService);
-  private readonly userService     = inject(UserService);
-  private readonly route   = inject(ActivatedRoute);
+  private readonly userService = inject(UserService);
+  private readonly route = inject(ActivatedRoute);
 
-  loading        = signal(false);
-  portalLoading  = signal(false);
+  loading = signal(false);
+  portalLoading = signal(false);
   successMessage = signal('');
-  errorMessage   = signal('');
+  errorMessage = signal('');
 
-  user        = this.userService.profile;
+  user = this.userService.profile;
   currentPlan = computed(() => this.user()?.plan ?? 'Free');
-  isPro       = computed(() => ['Pro', 'Team'].includes(this.currentPlan()));
-  isTeam      = computed(() => this.currentPlan() === 'Team');
+  isPro = computed(() => ['Pro', 'Team'].includes(this.currentPlan()));
+  isTeam = computed(() => this.currentPlan() === 'Team');
 
   readonly plans = [
     {
@@ -38,8 +39,10 @@ export class Billing implements OnInit {
       features: [
         '1 projet actif',
         '50 feedbacks / mois',
-        'Analyse IA basique',
-        'Kanban & filtres',
+        'Analyse IA : catégorie + résumé',
+        'Tableau kanban',
+        'Widget intégrable',
+        'Documentation & communauté',
       ],
       priceId: null,
       highlight: false,
@@ -53,12 +56,15 @@ export class Billing implements OnInit {
       description: 'Pour les freelances et agences actives.',
       features: [
         '10 projets actifs',
-        'Feedbacks illimités',
-        'Analyse IA avancée (score, sentiment, topics)',
-        'Export CSV',
+        "Jusqu'à 2 000 feedbacks / mois",
+        'Analyse IA complète : score de priorité, sentiment, topics',
+        'Filtres avancés & tri par priorité',
+        'Widget personnalisable (couleurs, texte, position)',
         'Graphique de tendances 30 jours',
+        'Export CSV',
+        'Réponse support sous 24h',
       ],
-      priceId: 'price_PRO_ID', // ← remplacer par votre vrai Price ID Stripe
+      priceId: environment.stripePrices.pro,
       highlight: true,
       cta: 'Passer au Pro',
     },
@@ -69,12 +75,15 @@ export class Billing implements OnInit {
       period: '/ mois',
       description: 'Pour les agences qui travaillent à plusieurs.',
       features: [
+        'Projets illimités',
+        "Jusqu'à 10 000 feedbacks / mois",
         'Tout le plan Pro',
-        'Membres illimités par projet',
-        'Rôles et permissions',
-        'Support prioritaire',
+        "Membres d'équipe illimités",
+        'Gestion des rôles & permissions',
+        'Tableau de bord partagé',
+        'Réponse support sous 4h',
       ],
-      priceId: 'price_TEAM_ID', // ← remplacer par votre vrai Price ID Stripe
+      priceId: environment.stripePrices.team,
       highlight: false,
       cta: 'Passer au Team',
     },
