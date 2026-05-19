@@ -1,10 +1,23 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { AuthService } from '../../../core/services/auth.service';
 import { BillingService } from './billing.service';
 import { UserService } from '../../../core/services/user.service';
 import { environment } from '../../../../environments/environment';
+
+type PaidPlanId = 'pro' | 'team';
+
+type PricingPlan = {
+  id: 'free' | PaidPlanId;
+  name: string;
+  price: string;
+  period: string;
+  description: string;
+  features: string[];
+  priceId: string | null;
+  highlight: boolean;
+  cta: string;
+};
 
 @Component({
   selector: 'app-billing',
@@ -28,7 +41,7 @@ export class Billing implements OnInit {
   isPro = computed(() => ['Pro', 'Team'].includes(this.currentPlan()));
   isTeam = computed(() => this.currentPlan() === 'Team');
 
-  readonly plans = [
+  readonly plans: PricingPlan[] = [
     {
       id: 'free',
       name: 'Free',
@@ -127,5 +140,11 @@ export class Billing implements OnInit {
 
   isPlanActive(planId: string): boolean {
     return this.currentPlan().toLowerCase() === planId;
+  }
+
+  selectPlan(plan: PricingPlan): void {
+    if (plan.id === 'free' || !plan.priceId) return;
+
+    this.upgrade(plan.priceId, plan.id);
   }
 }

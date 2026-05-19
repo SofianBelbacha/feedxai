@@ -24,7 +24,7 @@ export class BillingService {
     const successUrl = `${window.location.origin}/payment-success?plan=${planId}`;
     const cancelUrl  = `${window.location.origin}/dashboard/billing?canceled=true`;
     return this.http.post<CheckoutSessionResponse>(`${this.api}/checkout`, {
-      priceId, successUrl, cancelUrl
+      priceId, planName: planId, successUrl, cancelUrl
     });
   }
 

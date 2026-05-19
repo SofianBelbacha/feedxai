@@ -25,6 +25,7 @@ namespace AiReviewHub.Infrastructure.Services
             string userEmail,
             string? stripeCustomerId,
             string priceId,
+            string planName,
             string successUrl,
             string cancelUrl,
             CancellationToken cancellationToken = default)
@@ -46,6 +47,19 @@ namespace AiReviewHub.Infrastructure.Services
                 CustomerEmail = string.IsNullOrWhiteSpace(stripeCustomerId) ? userEmail : null,
                 Customer = stripeCustomerId,
                 AllowPromotionCodes = true,
+                Metadata = new Dictionary<string, string> 
+                {
+                    { "plan", planName }
+                },
+                SubscriptionData = new SessionSubscriptionDataOptions 
+                {
+                    Metadata = new Dictionary<string, string>
+                    {
+                        { "plan", planName }
+                    }
+                }
+
+
             };
 
             var service = new SessionService();

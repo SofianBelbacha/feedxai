@@ -97,13 +97,17 @@ services:
     container_name: stripe-cli
     profiles:
       - dev
-    command: listen --forward-to http://backend:8080/api/webhook
+    command: listen --forward-to http://backend-dev:8080/api/billing/webhook
     environment:
       - STRIPE_API_KEY=${STRIPE_SECRET_KEY}
     volumes:
       - stripe-config:/root/.config/stripe
     networks:
       - aireviewhub-network
+    depends_on:
+      backend-dev:
+        condition: service_started
+
 
 volumes:
   pgadmin-data:

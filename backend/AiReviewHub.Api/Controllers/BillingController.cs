@@ -29,6 +29,7 @@ namespace AiReviewHub.Api.Controllers
             var result = await _mediator.Send(
                 new CreateCheckoutSessionCommand(
                     request.PriceId,
+                    request.PlanName,
                     request.SuccessUrl,
                     request.CancelUrl),
                 cancellationToken);
@@ -73,7 +74,7 @@ namespace AiReviewHub.Api.Controllers
         }
 
         // ── DTOs ─────────────────────────────────────────────
-        public record CreateCheckoutSessionRequest(string PriceId, string SuccessUrl, string CancelUrl);
+        public record CreateCheckoutSessionRequest(string PriceId, string PlanName, string SuccessUrl, string CancelUrl);
         public record CreateBillingPortalRequest(string ReturnUrl);
     }
 }

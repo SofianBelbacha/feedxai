@@ -35,7 +35,9 @@ export const routes: Routes = [
 
         ]
     },
-
-    { path: '**', redirectTo: '' }
+    {
+        path: 'payment-success',
+        loadComponent: () => import('./shared/components/payment-success/payment-success').then(m => m.PaymentSuccess)
+    }
 
 ];

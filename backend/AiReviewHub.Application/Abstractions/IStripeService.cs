@@ -13,6 +13,7 @@ namespace AiReviewHub.Application.Abstractions
             string userEmail,
             string? stripeCustomerId,
             string priceId,
+            string planName,
             string successUrl,
             string cancelUrl,
             CancellationToken cancellationToken = default);

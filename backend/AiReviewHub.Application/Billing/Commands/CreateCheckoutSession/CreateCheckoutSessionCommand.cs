@@ -5,7 +5,7 @@ using System.Text;
 
 namespace AiReviewHub.Application.Billing.Commands.CreateCheckoutSession
 {
-    public record CreateCheckoutSessionCommand(string PriceId, string SuccessUrl, string CancelUrl)
+    public record CreateCheckoutSessionCommand(string PriceId, string PlanName, string SuccessUrl, string CancelUrl)
         : IRequest<CreateCheckoutSessionResult>;
 
     public record CreateCheckoutSessionResult(string Url);

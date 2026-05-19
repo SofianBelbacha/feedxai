@@ -36,6 +36,7 @@ namespace AiReviewHub.Application.Billing.Commands.CreateCheckoutSession
                 user.Email.Value,
                 user.StripeCustomerId,
                 request.PriceId,
+                request.PlanName,
                 request.SuccessUrl,
                 request.CancelUrl,
                 cancellationToken);

@@ -1,6 +1,7 @@
 ﻿using AiReviewHub.Application.Abstractions;
 using AiReviewHub.Domain.Abstractions;
 using AiReviewHub.Domain.Enums;
+using AiReviewHub.Domain.ValueObjects;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -76,8 +77,7 @@ namespace AiReviewHub.Application.Billing.Commands.HandleStripeWebhook
         }
 
         // ── checkout.session.completed ────────────────────────
-        private async Task HandleCheckoutSessionCompletedAsync(
-            Event stripeEvent, CancellationToken cancellationToken)
+        private async Task HandleCheckoutSessionCompletedAsync(Event stripeEvent, CancellationToken cancellationToken)
         {
             var session = stripeEvent.Data.Object as Stripe.Checkout.Session;
             if (session is null) return;
@@ -92,7 +92,7 @@ namespace AiReviewHub.Application.Billing.Commands.HandleStripeWebhook
             }
 
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email.Value == customerEmail.ToLower(), cancellationToken);
+                .FirstOrDefaultAsync(u => u.Email == Email.Create(customerEmail), cancellationToken);
 
             if (user is null)
             {
@@ -109,6 +109,7 @@ namespace AiReviewHub.Application.Billing.Commands.HandleStripeWebhook
 
             // Mise à jour du plan selon le metadata ou le price lookup
             var planStr = session.Metadata?.GetValueOrDefault("plan");
+            _logger.LogInformation("[Stripe] Plan from metadata: {Plan}", planStr);
             if (!string.IsNullOrWhiteSpace(planStr) && Enum.TryParse<Domain.Enums.Plan>(planStr, true, out var plan))
             {
                 if (user.Plan != plan)

@@ -75,7 +75,7 @@
                 [class.billing-plan__cta--primary]="plan.highlight && !isPlanActive(plan.id)"
                 [class.billing-plan__cta--current]="isPlanActive(plan.id)"
                 [disabled]="isPlanActive(plan.id) || loading()"
-                (click)="upgrade(plan.priceId, plan.id)">
+                (click)="selectPlan(plan)">
           @if (loading() && !isPlanActive(plan.id) && plan.priceId) {
             <span class="billing__spinner"></span>
           }
