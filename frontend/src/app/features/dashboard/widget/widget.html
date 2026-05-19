@@ -1,52 +1,61 @@
 <!-- widget-configurator.html -->
 <div class="widget-page">
 
-  <!-- ── En-tête ──────────────────────────────────────────── -->
-  <header class="widget-page__header">
-    <div>
-      <h1 class="widget-page__title">Configuration du widget</h1>
-      <p class="widget-page__subtitle">
-        Personnalisez l'apparence et le comportement de votre widget de feedback.
-      </p>
-    </div>
+  <!-- ═══════════════════════════════════════════════════════
+       PAYWALL — utilisateur Free
+       ═══════════════════════════════════════════════════════ -->
+  @if (!isPro()) {
+    <app-paywall [title]="'Personnalisation du widget'" [subtitle]="'La personnalisation et l\'intégration du widget sont disponibles à partir du plan'">
+    </app-paywall>
+  } @else {
 
-    <div class="widget-page__actions">
-      <button class="widget-page__reset" (click)="reset()">
-        Réinitialiser
-      </button>
-      <button
-        class="widget-page__save"
-        [disabled]="saving()"
-        [class.widget-page__save--saved]="saved()"
-        (click)="save()">
-        @if (saving()) {
+    <!-- ═══════════════════════════════════════════════════════
+        CONTENU NORMAL — Pro / Team
+        ═══════════════════════════════════════════════════════ -->
+
+    <!-- ── En-tête ──────────────────────────────────────────── -->
+    <header class="widget-page__header">
+      <div>
+        <h1 class="widget-page__title">Configuration du widget</h1>
+        <p class="widget-page__subtitle">
+          Personnalisez l'apparence et le comportement de votre widget de feedback.
+        </p>
+      </div>
+
+      <div class="widget-page__actions">
+        <button class="widget-page__reset" (click)="reset()">
+          Réinitialiser
+        </button>
+        <button class="widget-page__save" [disabled]="saving()" [class.widget-page__save--saved]="saved()"
+          (click)="save()">
+          @if (saving()) {
           <span class="btn-spinner"></span>
           Sauvegarde…
-        } @else if (saved()) {
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="2 8 6 12 14 4"/>
+          } @else if (saved()) {
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <polyline points="2 8 6 12 14 4" />
           </svg>
           Sauvegardé !
-        } @else {
+          } @else {
           Sauvegarder
-        }
-      </button>
-    </div>
-  </header>
+          }
+        </button>
+      </div>
+    </header>
 
-  @if (error()) {
+    @if (error()) {
     <div class="widget-page__error">{{ error() }}</div>
-  }
+    }
 
-  @if (loading()) {
+    @if (loading()) {
     <div class="widget-page__loading">
       <div class="skeleton skeleton--panel"></div>
       <div class="skeleton skeleton--preview"></div>
     </div>
-  }
+    }
 
-  @if (!loading()) {
+    @if (!loading()) {
     <div class="widget-layout">
 
       <!-- ── Panneau de configuration ─────────────────────── -->
@@ -55,65 +64,60 @@
         <!-- Mode d'affichage -->
         <section class="config-section">
           <h2 class="config-section__title">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
-                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="2" width="12" height="12" rx="2"/>
-              <line x1="6" y1="2" x2="6" y2="14"/>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+              stroke-linejoin="round">
+              <rect x="2" y="2" width="12" height="12" rx="2" />
+              <line x1="6" y1="2" x2="6" y2="14" />
             </svg>
             Mode d'affichage
           </h2>
 
           <div class="mode-grid">
             @for (mode of modes; track mode.value) {
-              <button
-                class="mode-card"
-                [class.mode-card--active]="config().mode === mode.value"
-                (click)="updateConfig({ mode: mode.value })">
-                <svg class="mode-card__icon" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="1.5"
-                     stroke-linecap="round" stroke-linejoin="round">
-                  <path [attr.d]="mode.icon"/>
-                </svg>
-                <span class="mode-card__label">{{ mode.label }}</span>
-                <span class="mode-card__desc">{{ mode.desc }}</span>
-              </button>
+            <button class="mode-card" [class.mode-card--active]="config().mode === mode.value"
+              (click)="updateConfig({ mode: mode.value })">
+              <svg class="mode-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path [attr.d]="mode.icon" />
+              </svg>
+              <span class="mode-card__label">{{ mode.label }}</span>
+              <span class="mode-card__desc">{{ mode.desc }}</span>
+            </button>
             }
           </div>
         </section>
 
         <!-- Position -->
         @if (config().mode !== 'inline') {
-          <section class="config-section">
-            <h2 class="config-section__title">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
-                   stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="8" cy="8" r="6"/>
-                <line x1="8" y1="4" x2="8" y2="8"/>
-                <line x1="8" y1="8" x2="11" y2="11"/>
-              </svg>
-              Position
-            </h2>
+        <section class="config-section">
+          <h2 class="config-section__title">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+              stroke-linejoin="round">
+              <circle cx="8" cy="8" r="6" />
+              <line x1="8" y1="4" x2="8" y2="8" />
+              <line x1="8" y1="8" x2="11" y2="11" />
+            </svg>
+            Position
+          </h2>
 
-            <div class="position-toggle">
-              @for (pos of positions; track pos.value) {
-                <button
-                  class="position-btn"
-                  [class.position-btn--active]="config().position === pos.value"
-                  (click)="updateConfig({ position: pos.value })">
-                  {{ pos.label }}
-                </button>
-              }
-            </div>
-          </section>
+          <div class="position-toggle">
+            @for (pos of positions; track pos.value) {
+            <button class="position-btn" [class.position-btn--active]="config().position === pos.value"
+              (click)="updateConfig({ position: pos.value })">
+              {{ pos.label }}
+            </button>
+            }
+          </div>
+        </section>
         }
 
         <!-- Couleur -->
         <section class="config-section">
           <h2 class="config-section__title">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
-                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="8" cy="8" r="6"/>
-              <path d="M8 2a6 6 0 0 1 0 12"/>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+              stroke-linejoin="round">
+              <circle cx="8" cy="8" r="6" />
+              <path d="M8 2a6 6 0 0 1 0 12" />
             </svg>
             Couleur principale
           </h2>
@@ -121,37 +125,26 @@
           <div class="color-picker">
             <div class="color-presets">
               @for (preset of presetColors; track preset.value) {
-                <button
-                  class="color-preset"
-                  [style.background]="preset.value"
-                  [class.color-preset--active]="config().primaryColor === preset.value"
-                  [title]="preset.label"
-                  (click)="updateConfig({ primaryColor: preset.value })">
-                  @if (config().primaryColor === preset.value) {
-                    <svg viewBox="0 0 12 12" fill="none" stroke="white"
-                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="1.5 6 4.5 9 10.5 3"/>
-                    </svg>
-                  }
-                </button>
+              <button class="color-preset" [style.background]="preset.value"
+                [class.color-preset--active]="config().primaryColor === preset.value" [title]="preset.label"
+                (click)="updateConfig({ primaryColor: preset.value })">
+                @if (config().primaryColor === preset.value) {
+                <svg viewBox="0 0 12 12" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <polyline points="1.5 6 4.5 9 10.5 3" />
+                </svg>
+                }
+              </button>
               }
             </div>
 
             <div class="color-custom">
               <label class="color-custom__label">Personnalisée</label>
               <div class="color-custom__input-wrap">
-                <input
-                  type="color"
-                  class="color-custom__picker"
-                  [value]="config().primaryColor"
+                <input type="color" class="color-custom__picker" [value]="config().primaryColor"
                   (input)="updateConfig({ primaryColor: $any($event.target).value })">
-                <input
-                  type="text"
-                  class="color-custom__hex"
-                  [value]="config().primaryColor"
-                  maxlength="7"
-                  placeholder="#3B82F6"
-                  (change)="updateConfig({ primaryColor: $any($event.target).value })">
+                <input type="text" class="color-custom__hex" [value]="config().primaryColor" maxlength="7"
+                  placeholder="#3B82F6" (change)="updateConfig({ primaryColor: $any($event.target).value })">
               </div>
             </div>
           </div>
@@ -160,11 +153,11 @@
         <!-- Textes -->
         <section class="config-section">
           <h2 class="config-section__title">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
-                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="2" y1="4" x2="14" y2="4"/>
-              <line x1="2" y1="8" x2="10" y2="8"/>
-              <line x1="2" y1="12" x2="12" y2="12"/>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+              stroke-linejoin="round">
+              <line x1="2" y1="4" x2="14" y2="4" />
+              <line x1="2" y1="8" x2="10" y2="8" />
+              <line x1="2" y1="12" x2="12" y2="12" />
             </svg>
             Textes
           </h2>
@@ -175,14 +168,8 @@
               <label class="text-field__label" for="widget-title">
                 Titre du panneau
               </label>
-              <input
-                id="widget-title"
-                class="text-field__input"
-                type="text"
-                placeholder="Votre avis compte"
-                maxlength="60"
-                [value]="config().title"
-                (input)="updateConfig({ title: $any($event.target).value })">
+              <input id="widget-title" class="text-field__input" type="text" placeholder="Votre avis compte"
+                maxlength="60" [value]="config().title" (input)="updateConfig({ title: $any($event.target).value })">
               <span class="text-field__counter">
                 {{ config().title.length }}/60
               </span>
@@ -192,13 +179,8 @@
               <label class="text-field__label" for="widget-placeholder">
                 Placeholder du textarea
               </label>
-              <input
-                id="widget-placeholder"
-                class="text-field__input"
-                type="text"
-                placeholder="Décrivez votre retour…"
-                maxlength="120"
-                [value]="config().placeholder"
+              <input id="widget-placeholder" class="text-field__input" type="text" placeholder="Décrivez votre retour…"
+                maxlength="120" [value]="config().placeholder"
                 (input)="updateConfig({ placeholder: $any($event.target).value })">
               <span class="text-field__counter">
                 {{ config().placeholder.length }}/120
@@ -209,14 +191,8 @@
               <label class="text-field__label" for="widget-btn-label">
                 Label du bouton flottant
               </label>
-              <input
-                id="widget-btn-label"
-                class="text-field__input"
-                type="text"
-                placeholder="Feedback"
-                maxlength="30"
-                [value]="config().buttonLabel"
-                (input)="updateConfig({ buttonLabel: $any($event.target).value })">
+              <input id="widget-btn-label" class="text-field__input" type="text" placeholder="Feedback" maxlength="30"
+                [value]="config().buttonLabel" (input)="updateConfig({ buttonLabel: $any($event.target).value })">
               <span class="text-field__counter">
                 {{ config().buttonLabel.length }}/30
               </span>
@@ -253,81 +229,72 @@
 
             <!-- Widget preview inline -->
             @if (config().mode === 'inline' || config().mode === 'both') {
-              <div class="widget-preview widget-preview--inline">
-                <div class="widget-preview__form">
-                  <p class="widget-preview__title"
-                     [style.color]="config().primaryColor">
-                    {{ config().title || 'Votre avis compte' }}
-                  </p>
-                  <div class="widget-preview__textarea">
-                    {{ config().placeholder || 'Décrivez votre retour…' }}
-                  </div>
-                  <div class="widget-preview__categories">
-                    <span class="widget-preview__cat">🐛 Bug</span>
-                    <span class="widget-preview__cat">✨ Idée</span>
-                    <span class="widget-preview__cat">❓ Question</span>
-                  </div>
-                  <button
-                    class="widget-preview__submit"
-                    [style.background]="config().primaryColor">
-                    Envoyer
-                  </button>
+            <div class="widget-preview widget-preview--inline">
+              <div class="widget-preview__form">
+                <p class="widget-preview__title" [style.color]="config().primaryColor">
+                  {{ config().title || 'Votre avis compte' }}
+                </p>
+                <div class="widget-preview__textarea">
+                  {{ config().placeholder || 'Décrivez votre retour…' }}
                 </div>
+                <div class="widget-preview__categories">
+                  <span class="widget-preview__cat">🐛 Bug</span>
+                  <span class="widget-preview__cat">✨ Idée</span>
+                  <span class="widget-preview__cat">❓ Question</span>
+                </div>
+                <button class="widget-preview__submit" [style.background]="config().primaryColor">
+                  Envoyer
+                </button>
               </div>
+            </div>
             }
 
             <!-- Widget preview flottant -->
             @if (config().mode === 'floating' || config().mode === 'both') {
-              <button
-                class="widget-preview__trigger"
-                [class.widget-preview__trigger--left]="config().position === 'bottom-left'"
-                [style.background]="config().primaryColor"
-                (click)="previewOpen.update(v => !v)">
-                @if (!previewOpen()) {
-                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor"
-                       stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M2 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6l-4 4V5z"/>
-                  </svg>
-                  {{ config().buttonLabel || 'Feedback' }}
-                } @else {
-                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor"
-                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="4" y1="4" x2="16" y2="16"/>
-                    <line x1="16" y1="4" x2="4" y2="16"/>
-                  </svg>
-                  Fermer
-                }
-              </button>
-
-              @if (previewOpen()) {
-                <div
-                  class="widget-preview__panel"
-                  [class.widget-preview__panel--left]="config().position === 'bottom-left'">
-                  <div class="widget-preview__panel-header"
-                       [style.background]="config().primaryColor">
-                    <p class="widget-preview__panel-title">
-                      {{ config().title || 'Votre avis compte' }}
-                    </p>
-                    <p class="widget-preview__panel-sub">
-                      Aidez-nous à améliorer votre expérience
-                    </p>
-                  </div>
-                  <div class="widget-preview__form widget-preview__form--small">
-                    <div class="widget-preview__textarea widget-preview__textarea--small">
-                      {{ config().placeholder || 'Décrivez votre retour…' }}
-                    </div>
-                    <div class="widget-preview__categories">
-                      <span class="widget-preview__cat">🐛 Bug</span>
-                      <span class="widget-preview__cat">✨ Idée</span>
-                    </div>
-                    <button
-                      class="widget-preview__submit widget-preview__submit--small"
-                      [style.background]="config().primaryColor">
-                      Envoyer
-                    </button>
-                  </div>
-                </div>
+            <button class="widget-preview__trigger"
+              [class.widget-preview__trigger--left]="config().position === 'bottom-left'"
+              [style.background]="config().primaryColor" (click)="previewOpen.update(v => !v)">
+              @if (!previewOpen()) {
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M2 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6l-4 4V5z" />
+              </svg>
+              {{ config().buttonLabel || 'Feedback' }}
+              } @else {
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <line x1="4" y1="4" x2="16" y2="16" />
+                <line x1="16" y1="4" x2="4" y2="16" />
+              </svg>
+              Fermer
               }
+            </button>
+
+            @if (previewOpen()) {
+            <div class="widget-preview__panel" [class.widget-preview__panel--left]="config().position === 'bottom-left'">
+              <div class="widget-preview__panel-header" [style.background]="config().primaryColor">
+                <p class="widget-preview__panel-title">
+                  {{ config().title || 'Votre avis compte' }}
+                </p>
+                <p class="widget-preview__panel-sub">
+                  Aidez-nous à améliorer votre expérience
+                </p>
+              </div>
+              <div class="widget-preview__form widget-preview__form--small">
+                <div class="widget-preview__textarea widget-preview__textarea--small">
+                  {{ config().placeholder || 'Décrivez votre retour…' }}
+                </div>
+                <div class="widget-preview__categories">
+                  <span class="widget-preview__cat">🐛 Bug</span>
+                  <span class="widget-preview__cat">✨ Idée</span>
+                </div>
+                <button class="widget-preview__submit widget-preview__submit--small"
+                  [style.background]="config().primaryColor">
+                  Envoyer
+                </button>
+              </div>
+            </div>
+            }
             }
 
           </div>
@@ -336,48 +303,41 @@
         <!-- ── Snippet d'intégration ───────────────────────── -->
         <div class="snippet-box">
           <div class="snippet-box__tabs">
-            <button
-              class="snippet-box__tab"
-              [class.snippet-box__tab--active]="activeSnippetTab() === 'cdn'"
+            <button class="snippet-box__tab" [class.snippet-box__tab--active]="activeSnippetTab() === 'cdn'"
               (click)="activeSnippetTab.set('cdn')">
               Script CDN
             </button>
-            <button
-              class="snippet-box__tab"
-              [class.snippet-box__tab--active]="activeSnippetTab() === 'npm'"
+            <button class="snippet-box__tab" [class.snippet-box__tab--active]="activeSnippetTab() === 'npm'"
               (click)="activeSnippetTab.set('npm')">
               npm module
             </button>
 
-            <button
-              class="snippet-box__copy"
-              [class.snippet-box__copy--copied]="copiedSnippet()"
-              (click)="copySnippet()">
+            <button class="snippet-box__copy" [class.snippet-box__copy--copied]="copiedSnippet()" (click)="copySnippet()">
               @if (copiedSnippet()) {
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
-                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="2 8 6 12 14 4"/>
-                </svg>
-                Copié !
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="2 8 6 12 14 4" />
+              </svg>
+              Copié !
               } @else {
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
-                     stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="5" y="5" width="9" height="9" rx="1.5"/>
-                  <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/>
-                </svg>
-                Copier
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                stroke-linejoin="round">
+                <rect x="5" y="5" width="9" height="9" rx="1.5" />
+                <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" />
+              </svg>
+              Copier
               }
             </button>
           </div>
 
           <pre class="snippet-box__code"><code>{{
-            activeSnippetTab() === 'cdn' ? snippet() : snippetNpmModule()
-          }}</code></pre>
+              activeSnippetTab() === 'cdn' ? snippet() : snippetNpmModule()
+            }}</code></pre>
         </div>
 
       </div>
 
     </div>
+    }
   }
-
 </div>

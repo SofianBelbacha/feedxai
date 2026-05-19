@@ -2,15 +2,19 @@ import { Component, OnInit, inject, signal, computed, ElementRef, AfterViewInit,
 import { CommonModule, DatePipe } from '@angular/common';
 import { TrendsService } from './trends.service';
 import { TrendsData, Period, ChartType, TrendPoint } from './trends.types';
+import { RouterLink } from '@angular/router';
+import { UserService } from '../../../core/services/user.service';
+import { Paywall } from '../../../shared/components/paywall/paywall';
 
 @Component({
   selector: 'app-trends',
-  imports: [CommonModule, DatePipe],
+  imports: [CommonModule, DatePipe, RouterLink, Paywall],
   templateUrl: './trends.html',
   styleUrl: './trends.scss',
 })
 export class Trends implements OnInit, AfterViewInit {
   private readonly service = inject(TrendsService);
+  private readonly userService = inject(UserService);
 
   @ViewChild('lineCanvas') lineCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('barCanvas') barCanvas!: ElementRef<HTMLCanvasElement>;
@@ -27,6 +31,13 @@ export class Trends implements OnInit, AfterViewInit {
     { value: 30, label: '30 jours' },
     { value: 90, label: '90 jours' },
   ];
+
+  // ─── Accès plan ───────────────────────────────────────────────────────────
+  readonly isPro = computed(() => {
+    const plan = this.userService.profile()?.plan ?? 'Free';
+    return plan === 'Pro' || plan === 'Team';
+  });
+
 
   // ─── Computed ─────────────────────────────────────────────
   readonly summary = computed(() => this.data()?.summary);
@@ -68,6 +79,10 @@ export class Trends implements OnInit, AfterViewInit {
   ngAfterViewInit(): void { }
 
   load(): void {
+    if (!this.isPro()) {
+      this.loading.set(false);
+      return;
+    }
     this.loading.set(true);
     this.error.set('');
 

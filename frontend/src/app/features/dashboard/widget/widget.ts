@@ -8,10 +8,12 @@ import { WidgetConfigService } from './widget-config.service';
 import { WidgetConfig, WidgetMode, WidgetPosition, DEFAULT_CONFIG, PRESET_COLORS } from './widget.types';
 import { environment } from '../../../../environments/environment';
 import { DashboardContextService } from '../../../core/services/dashboard-context.service';
+import { RouterLink } from '@angular/router';
+import { Paywall } from '../../../shared/components/paywall/paywall';
 
 @Component({
   selector: 'app-widget',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink, Paywall],
   templateUrl: './widget.html',
   styleUrl: './widget.scss',
 })
@@ -28,6 +30,12 @@ export class Widget implements OnInit {
   config  = signal<WidgetConfig>({ ...DEFAULT_CONFIG });
 
   readonly project = this.dashboardContext.selectedProject;
+
+    // ─── Accès plan ───────────────────────────────────────────────────────────
+  readonly isPro = computed(() => {
+    const plan = this.dashboardContext.plan();
+    return plan === 'Pro' || plan === 'Team';
+  });
 
   // ─── Preview ──────────────────────────────────────────────────────────────
   previewOpen = signal(false);
@@ -85,7 +93,7 @@ export class Widget implements OnInit {
       this.config.set({ ...DEFAULT_CONFIG });
       this.error.set('');
 
-      if (!projectId) {
+      if (!projectId || !this.isPro()) {
         this.loading.set(false);
         return;
       }

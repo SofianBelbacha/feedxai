@@ -1,0 +1,141 @@
+// ══════════════════════════════════════════════════════════
+// PAYWALL — plan Free
+// ══════════════════════════════════════════════════════════
+
+.paywall {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 4rem 2rem;
+  max-width: 520px;
+  margin: 0 auto;
+  animation: fadeIn 0.3s ease;
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+// ── Icône cadenas ──────────────────────────────────────────
+.paywall__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: var(--color-surface-lt, #F8F9FA);
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+  margin-bottom: 1.5rem;
+
+  svg { width: 36px; height: 36px; }
+}
+
+// ── Titre ──────────────────────────────────────────────────
+.paywall__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-dark);
+  margin: 0 0 0.75rem;
+}
+
+// ── Sous-titre ─────────────────────────────────────────────
+.paywall__subtitle {
+  font-size: 0.9375rem;
+  color: var(--color-text-secondary, #6B7280);
+  line-height: 1.6;
+  margin: 0 0 2rem;
+
+  strong { color: var(--color-dark); }
+}
+
+// ── Liste des avantages ────────────────────────────────────
+.paywall__features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: 100%;
+  max-width: 380px;
+  text-align: left;
+}
+
+.paywall__feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: var(--color-text-primary, #111827);
+
+  svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: #10B981;
+  }
+}
+
+// ── Prix ───────────────────────────────────────────────────
+.paywall__pricing {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 1.25rem;
+}
+
+.paywall__price {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--color-dark);
+  line-height: 1;
+}
+
+.paywall__period {
+  font-size: 0.875rem;
+  color: var(--color-muted);
+}
+
+// ── CTA principal ──────────────────────────────────────────
+.paywall__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 28px;
+  border-radius: var(--radius-inner, 8px);
+  background-color: var(--color-dark);
+  color: var(--color-white);
+  font-family: var(--font-medium);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+  margin-bottom: 1rem;
+
+  svg { width: 14px; height: 14px; }
+
+  &:hover { opacity: 0.88; }
+}
+
+// ── Hint ───────────────────────────────────────────────────
+.paywall__hint {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+.paywall__hint-link {
+  color: var(--color-dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-family: var(--font-medium);
+
+  &:hover { opacity: 0.75; }
+}

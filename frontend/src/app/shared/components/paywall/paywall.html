@@ -1,0 +1,82 @@
+<div class="paywall">
+
+    <!-- Icône -->
+    <div class="paywall__icon" aria-hidden="true">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+            stroke-linejoin="round">
+            <rect x="8" y="20" width="32" height="22" rx="3" />
+            <path d="M16 20v-6a8 8 0 0 1 16 0v6" />
+            <circle cx="24" cy="31" r="3" fill="currentColor" stroke="none" />
+            <line x1="24" y1="34" x2="24" y2="37" />
+        </svg>
+    </div>
+
+    <!-- Titre + sous-titre -->
+    <h1 class="paywall__title">
+         {{ title() }} 
+    </h1>
+    <p class="paywall__subtitle">
+         {{ subtitle() }} <strong>Pro</strong>.
+    </p>
+
+    <!-- Liste des avantages -->
+    <ul class="paywall__features">
+        <li class="paywall__feature">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="2.5 8 6 11.5 13.5 4" />
+            </svg>
+            Widget JS personnalisable (couleur, titre, position)
+        </li>
+        <li class="paywall__feature">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="2.5 8 6 11.5 13.5 4" />
+            </svg>
+            Snippet prêt à coller en 2 minutes sur n'importe quel site
+        </li>
+        <li class="paywall__feature">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="2.5 8 6 11.5 13.5 4" />
+            </svg>
+            10 projets actifs et feedbacks illimités
+        </li>
+        <li class="paywall__feature">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="2.5 8 6 11.5 13.5 4" />
+            </svg>
+            Analyse IA avancée — score, sentiment, topics clés
+        </li>
+        <li class="paywall__feature">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="2.5 8 6 11.5 13.5 4" />
+            </svg>
+            Export CSV et graphique de tendances 30 jours
+        </li>
+    </ul>
+
+    <!-- Prix + CTA -->
+    <div class="paywall__pricing">
+        <span class="paywall__price">9€</span>
+        <span class="paywall__period">/ mois, sans engagement</span>
+    </div>
+
+    <a routerLink="/dashboard/billing" class="paywall__cta">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M3 8h10M9 4l4 4-4 4" />
+        </svg>
+        Passer au plan Pro
+    </a>
+
+    <p class="paywall__hint">
+        Déjà abonné ?
+        <a routerLink="/dashboard/billing" class="paywall__hint-link">
+            Vérifier mon abonnement
+        </a>
+    </p>
+
+</div>
