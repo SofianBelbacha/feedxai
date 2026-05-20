@@ -5,6 +5,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { UserService } from '../../../core/services/user.service';
 import { DashboardContextService } from '../../../core/services/dashboard-context.service';
 import { BillingService, QuotaResult } from '../../../shared/components/billing/billing.service';
+import { ProjectSwitcher } from '../../../shared/components/project-switcher/project-switcher';
 
 interface NavItem {
   label: string;
@@ -15,7 +16,7 @@ interface NavItem {
 
 @Component({
   selector: 'app-dashboard-shell',
-  imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet, ProjectSwitcher],
   templateUrl: './dashboard-shell.html',
   styleUrl: './dashboard-shell.scss',
 })

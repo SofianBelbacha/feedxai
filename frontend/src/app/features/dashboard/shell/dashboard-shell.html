@@ -32,27 +32,8 @@
     </div>
 
     <!-- Sélecteur de projet -->
-    @if (!sidebarCollapsed()) {
-      <div class="sidebar__project">
-        <div class="sidebar__project-info">
-          <div class="sidebar__project-avatar" aria-hidden="true">
-            {{ currentProject()?.name?.charAt(0) }}
-          </div>
-          <div class="sidebar__project-meta">
-            <span class="sidebar__project-name">{{ currentProject()?.name || 'Aucun projet sélectionné' }}</span>
-            <span class="sidebar__project-plan">{{ currentPlan() }}</span>
-          </div>
-        </div>
-        <button class="sidebar__project-switch" type="button" aria-label="Changer de projet">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M2 5l6-3 6 3v6l-6 3-6-3V5z"/>
-            <path d="M8 2v14"/>
-          </svg>
-        </button>
-      </div>
-    }
-
+    <app-project-switcher></app-project-switcher>
+    
     <!-- Navigation principale -->
     <nav class="sidebar__nav" aria-label="Navigation principale">
       @if (!sidebarCollapsed()) {
