@@ -1,282 +1,262 @@
-<!-- overview.html -->
-<div class="overview">
+<!-- overview.html — Inbox orientée action -->
+<div class="inbox">
 
-  <!-- ── En-tête ─────────────────────────────────────────── -->
-  <header class="overview__header">
-    <div class="overview__greeting">
-      <h1 class="overview__title">
+  <!-- ══════════════════════════════════════════════════════════
+       HEADER
+       ══════════════════════════════════════════════════════════ -->
+  <header class="inbox__header">
+    <div class="inbox__header-left">
+      <h1 class="inbox__title">
         Bonjour, {{ firstName() }}.
-        <span class="overview__title-wave" aria-hidden="true">👋</span>
       </h1>
-      <p class="overview__subtitle">Voici ce qui s'est passé sur vos projets.</p>
+      <p class="inbox__subtitle">
+        @if (currentProject()) {
+          Projet actif — <strong>{{ currentProject()!.name }}</strong>
+        } @else {
+          Vue globale de tous vos projets
+        }
+      </p>
     </div>
-    <a routerLink="/dashboard/feedbacks" class="overview__cta">
+    <a routerLink="/dashboard/feedbacks" class="inbox__header-cta">
       Voir tous les feedbacks
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-        stroke-linejoin="round">
-        <line x1="3" y1="8" x2="13" y2="8" />
-        <polyline points="9 4 13 8 9 12" />
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="2" y1="7" x2="12" y2="7"/>
+        <polyline points="8 3 12 7 8 11"/>
       </svg>
     </a>
   </header>
 
-  <!-- ── Loading ─────────────────────────────────────────── -->
+  <!-- ══════════════════════════════════════════════════════════
+       LOADING
+       ══════════════════════════════════════════════════════════ -->
   @if (loading()) {
-  <div class="overview__loading">
-    <div class="overview__skeleton overview__skeleton--stats"></div>
-    <div class="overview__skeleton overview__skeleton--chart"></div>
-    <div class="overview__skeleton overview__skeleton--kanban"></div>
-  </div>
+    <div class="inbox__loading">
+      <div class="inbox__skel inbox__skel--kpi"></div>
+      <div class="inbox__skel inbox__skel--alert"></div>
+      <div class="inbox__skel inbox__skel--feed"></div>
+    </div>
   }
 
-  <!-- ── Erreur ───────────────────────────────────────────── -->
+  <!-- ══════════════════════════════════════════════════════════
+       ERREUR
+       ══════════════════════════════════════════════════════════ -->
   @if (error()) {
-  <div class="overview__error">
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-      stroke-linejoin="round">
-      <circle cx="10" cy="10" r="8" />
-      <line x1="10" y1="6" x2="10" y2="10.5" />
-      <circle cx="10" cy="14" r="0.5" fill="currentColor" />
-    </svg>
-    {{ error() }}
-    <button class="overview__error-retry" (click)="loadDashboard()">
-      Réessayer
-    </button>
-  </div>
+    <div class="inbox__error" role="alert">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="8" cy="8" r="7"/>
+        <line x1="8" y1="5" x2="8" y2="8.5"/>
+        <circle cx="8" cy="11" r="0.5" fill="currentColor"/>
+      </svg>
+      {{ error() }}
+      <button class="inbox__error-retry" (click)="load()">Réessayer</button>
+    </div>
   }
 
   @if (!loading() && !error()) {
 
-  <!-- ── Stats ────────────────────────────────────────────── -->
-  <section class="overview__stats" aria-label="Statistiques">
-
-    <div class="stat-card stat-card--total">
-      <div class="stat-card__icon" aria-hidden="true">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-          stroke-linejoin="round">
-          <path d="M2 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4l-4 4V5z" />
+    <!-- ════════════════════════════════════════════════════════
+         BANDE D'ALERTE — uniquement si urgents non traités
+         ════════════════════════════════════════════════════════ -->
+    @if (urgentCount() > 0) {
+      <div class="inbox__alert" role="alert">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 2L1.5 14h13L8 2z"/>
+          <line x1="8" y1="7" x2="8" y2="10"/>
+          <circle cx="8" cy="12.5" r="0.5" fill="currentColor"/>
         </svg>
-      </div>
-      <div class="stat-card__body">
-        <span class="stat-card__value">{{ stats().totalFeedbacks }}</span>
-        <span class="stat-card__label">Feedbacks totaux</span>
-      </div>
-    </div>
-
-    <div class="stat-card stat-card--todo">
-      <div class="stat-card__icon" aria-hidden="true">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-          stroke-linejoin="round">
-          <circle cx="10" cy="10" r="8" />
-          <line x1="10" y1="6" x2="10" y2="10" />
-          <line x1="10" y1="10" x2="13" y2="13" />
-        </svg>
-      </div>
-      <div class="stat-card__body">
-        <span class="stat-card__value">{{ stats().todoCount }}</span>
-        <span class="stat-card__label">À traiter</span>
-      </div>
-    </div>
-
-    <div class="stat-card stat-card--progress">
-      <div class="stat-card__icon" aria-hidden="true">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-          stroke-linejoin="round">
-          <path d="M4 4h12v12H4z" />
-          <path d="M4 10h8" />
-        </svg>
-      </div>
-      <div class="stat-card__body">
-        <span class="stat-card__value">{{ stats().inProgressCount }}</span>
-        <span class="stat-card__label">En cours</span>
-      </div>
-    </div>
-
-    <div class="stat-card stat-card--resolved">
-      <div class="stat-card__icon" aria-hidden="true">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-          stroke-linejoin="round">
-          <polyline points="3 10 8 15 17 5" />
-        </svg>
-      </div>
-      <div class="stat-card__body">
-        <span class="stat-card__value">{{ stats().resolvedCount }}</span>
-        <span class="stat-card__label">Résolus</span>
-      </div>
-    </div>
-
-    <div class="stat-card stat-card--urgent">
-      <div class="stat-card__icon" aria-hidden="true">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-          stroke-linejoin="round">
-          <path d="M10 2L2 17h16L10 2z" />
-          <line x1="10" y1="9" x2="10" y2="12" />
-          <circle cx="10" cy="15" r="0.5" fill="currentColor" />
-        </svg>
-      </div>
-      <div class="stat-card__body">
-        <span class="stat-card__value">{{ stats().highPriorityCount }}</span>
-        <span class="stat-card__label">Priorité haute</span>
-      </div>
-    </div>
-
-  </section>
-
-  <!-- ── Graphique de tendance ─────────────────────────── -->
-  <section class="overview__chart" aria-label="Tendance des 30 derniers jours">
-    <div class="chart-header">
-      <h2 class="chart-header__title">Volume de feedbacks</h2>
-      <span class="chart-header__period">30 derniers jours</span>
-    </div>
-
-    @if (trendBars().length === 0) {
-    <div class="chart-empty">
-      Aucune donnée disponible pour cette période.
-    </div>
-    } @else {
-    <div class="chart-bars" role="img" aria-label="Graphique en barres">
-      @for (bar of trendBars(); track trackByDate($index, bar)) {
-      <div class="chart-bar-wrap">
-        <div class="chart-bar" [style.height.%]="bar.height" [title]="bar.date + ' : ' + bar.count + ' feedback(s)'">
-        </div>
-        @if ($index % 5 === 0) {
-        <span class="chart-bar__label">
-          {{ bar.date | date:'dd/MM' }}
+        <span>
+          <strong>{{ urgentCount() }} feedback{{ urgentCount() > 1 ? 's' : '' }} urgent{{ urgentCount() > 1 ? 's' : '' }}</strong>
+          non traité{{ urgentCount() > 1 ? 's' : '' }} — à traiter en priorité.
         </span>
-        }
+        <a routerLink="/dashboard/feedbacks" class="inbox__alert-link">
+          Voir →
+        </a>
       </div>
-      }
-    </div>
     }
-  </section>
 
-  <!-- ── Kanban des feedbacks récents ─────────────────── -->
-  <section class="overview__kanban" aria-label="Feedbacks récents">
-    <h2 class="overview__section-title">Feedbacks récents</h2>
-
-    <div class="kanban">
+    <!-- ════════════════════════════════════════════════════════
+         KPI CARDS — 3 métriques actionnables uniquement
+         ════════════════════════════════════════════════════════ -->
+    <section class="inbox__kpi" aria-label="Indicateurs clés">
 
       <!-- À traiter -->
-      <div class="kanban__col">
-        <div class="kanban__col-header kanban__col-header--todo">
-          <span class="kanban__col-dot" aria-hidden="true"></span>
-          À traiter
-          <span class="kanban__col-count">{{ todoFeedbacks().length }}</span>
+      <a routerLink="/dashboard/feedbacks" class="kpi-card kpi-card--todo">
+        <div class="kpi-card__icon" aria-hidden="true">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="10" cy="10" r="8"/>
+            <line x1="10" y1="6" x2="10" y2="10"/>
+            <line x1="10" y1="10" x2="13" y2="13"/>
+          </svg>
         </div>
-        <div class="kanban__cards">
-          @for (fb of todoFeedbacks(); track trackById($index, fb)) {
-          <article class="kanban-card" [class]="getPriorityClass(fb.priority)">
-
-            @if (fb.aiAnalysisStatus !== 'Completed') {
-            <div class="kanban-card__ai-status">
-              @switch (fb.aiAnalysisStatus) {
-              @case ('Pending') {
-              <span class="ai-badge ai-badge--pending">
-                <span class="ai-badge__dot"></span>
-                En attente
-              </span>
-              }
-              @case ('Processing') {
-              <span class="ai-badge ai-badge--processing">
-                <span class="ai-badge__spinner"></span>
-                Analyse IA…
-              </span>
-              }
-              @case ('Failed') {
-              <span class="ai-badge ai-badge--failed">
-                ⚠️ Échec IA
-              </span>
-              }
-              @default { }
-              }
-            </div>
-            }
-
-            <p class="kanban-card__summary">{{ fb.aiSummary || fb.content }}</p>
-            <div class="kanban-card__meta">
-              <span class="kanban-card__category">{{ getCategoryLabel(fb.category) }}</span>
-              <span class="kanban-card__date">{{ fb.createdAt | date:'dd/MM' }}</span>
-            </div>
-          </article>
-          }
+        <div class="kpi-card__body">
+          <span class="kpi-card__value">{{ stats().todoCount }}</span>
+          <span class="kpi-card__label">À traiter</span>
         </div>
-      </div>
+        <svg class="kpi-card__arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="4 2 10 7 4 12"/>
+        </svg>
+      </a>
+
+      <!-- Urgents -->
+      <a routerLink="/dashboard/feedbacks" class="kpi-card kpi-card--urgent">
+        <div class="kpi-card__icon" aria-hidden="true">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 2L2 17h16L10 2z"/>
+            <line x1="10" y1="9" x2="10" y2="12"/>
+            <circle cx="10" cy="15" r="0.5" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="kpi-card__body">
+          <span class="kpi-card__value">{{ stats().highPriorityCount }}</span>
+          <span class="kpi-card__label">Priorité haute</span>
+        </div>
+        <svg class="kpi-card__arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="4 2 10 7 4 12"/>
+        </svg>
+      </a>
 
       <!-- En cours -->
-      <div class="kanban__col">
-        <div class="kanban__col-header kanban__col-header--progress">
-          <span class="kanban__col-dot" aria-hidden="true"></span>
-          En cours
-          <span class="kanban__col-count">{{ inProgressFeedbacks().length }}</span>
+      <div class="kpi-card kpi-card--progress">
+        <div class="kpi-card__icon" aria-hidden="true">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="10" cy="10" r="8"/>
+            <path d="M10 6v4l3 3"/>
+          </svg>
         </div>
-        <div class="kanban__cards">
-          @for (fb of inProgressFeedbacks(); track trackById($index, fb)) {
-          <article class="kanban-card" [class]="getPriorityClass(fb.priority)">
-
-            @if (fb.aiAnalysisStatus !== 'Completed') {
-            <div class="kanban-card__ai-status">
-              @switch (fb.aiAnalysisStatus) {
-              @case ('Pending') {
-              <span class="ai-badge ai-badge--pending">
-                <span class="ai-badge__dot"></span>
-                En attente
-              </span>
-              }
-              @case ('Processing') {
-              <span class="ai-badge ai-badge--processing">
-                <span class="ai-badge__spinner"></span>
-                Analyse IA…
-              </span>
-              }
-              @case ('Failed') {
-              <span class="ai-badge ai-badge--failed">
-                ⚠️ Échec IA
-              </span>
-              }
-              @default { }
-              }
+        <div class="kpi-card__body">
+          <span class="kpi-card__value">{{ stats().inProgressCount }}</span>
+          <span class="kpi-card__label">En cours</span>
+        </div>
+        <!-- Sparkline 7 jours -->
+        <div class="kpi-card__sparkline" aria-hidden="true">
+          @for (point of sparkline7(); track trackByDate($index, point)) {
+            <div
+              class="kpi-card__spark-bar"
+              [style.height.%]="getSparklineHeight(point.count)"
+              [title]="point.date + ' : ' + point.count">
             </div>
-            }
-
-            <p class="kanban-card__summary">{{ fb.aiSummary || fb.content }}</p>
-            <div class="kanban-card__meta">
-              <span class="kanban-card__category">{{ getCategoryLabel(fb.category) }}</span>
-              <span class="kanban-card__date">{{ fb.createdAt | date:'dd/MM' }}</span>
-            </div>
-          </article>
           }
         </div>
       </div>
 
-      <!-- Résolus -->
-      <div class="kanban__col">
-        <div class="kanban__col-header kanban__col-header--done">
-          <span class="kanban__col-dot" aria-hidden="true"></span>
-          Résolus
-          <span class="kanban__col-count">{{ doneFeedbacks().length }}</span>
-        </div>
-        <div class="kanban__cards">
-          @for (fb of doneFeedbacks(); track trackById($index, fb)) {
-            <article class="kanban-card kanban-card--done" [class]="getPriorityClass(fb.priority)">
+    </section>
 
-              @if (fb.aiAnalysisStatus === 'Failed') {
-                <div class="kanban-card__ai-status">
-                  <span class="ai-badge ai-badge--failed">⚠️ Échec IA</span>
+    <!-- ════════════════════════════════════════════════════════
+         FEED — Inbox des feedbacks à traiter
+         ════════════════════════════════════════════════════════ -->
+    <section class="inbox__feed" aria-label="Feedbacks à traiter">
+
+      <div class="inbox__feed-header">
+        <h2 class="inbox__feed-title">
+          À traiter
+          @if (todoFeedbacks().length > 0) {
+            <span class="inbox__feed-count">{{ todoFeedbacks().length }}</span>
+          }
+        </h2>
+        <a routerLink="/dashboard/feedbacks" class="inbox__feed-link">
+          Tout voir →
+        </a>
+      </div>
+
+      <!-- État vide -->
+      @if (todoFeedbacks().length === 0) {
+        <div class="inbox__empty">
+          <div class="inbox__empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 11 4 6 4 44 44 44 44 6 39 11"/>
+              <rect x="9" y="2" width="30" height="12" rx="2"/>
+              <polyline points="16 26 21 31 32 20"/>
+            </svg>
+          </div>
+          <p class="inbox__empty-title">Aucun feedback à traiter</p>
+          <p class="inbox__empty-desc">
+            Partagez votre widget client pour commencer à recevoir des retours.
+          </p>
+          <a routerLink="/dashboard/widget" class="inbox__empty-cta">
+            Configurer le widget →
+          </a>
+        </div>
+      }
+
+      <!-- Liste des feedbacks -->
+      @if (todoFeedbacks().length > 0) {
+        <ul class="inbox__list" role="list">
+          @for (fb of todoFeedbacks(); track trackById($index, fb)) {
+            <li class="inbox-item inbox-item--{{ getPriorityConfig(fb.priority).cls }}">
+
+              <!-- Barre de priorité (left border) -->
+              <span class="inbox-item__priority-bar" aria-hidden="true"></span>
+
+              <!-- Corps -->
+              <div class="inbox-item__body">
+
+                <!-- Ligne 1 : badge IA ou résumé -->
+                @if (fb.aiAnalysisStatus !== 'Completed') {
+                  <div class="inbox-item__ai">
+                    @switch (fb.aiAnalysisStatus) {
+                      @case ('Pending') {
+                        <span class="inbox-ai-badge inbox-ai-badge--pending">
+                          <span class="inbox-ai-dot"></span>
+                          Analyse en attente…
+                        </span>
+                      }
+                      @case ('Processing') {
+                        <span class="inbox-ai-badge inbox-ai-badge--processing">
+                          <span class="inbox-ai-spinner"></span>
+                          Analyse IA en cours…
+                        </span>
+                      }
+                      @case ('Failed') {
+                        <span class="inbox-ai-badge inbox-ai-badge--failed">
+                          Échec IA
+                        </span>
+                      }
+                      @default {}
+                    }
+                  </div>
+                }
+
+                <p class="inbox-item__summary">
+                  {{ fb.aiSummary || fb.content }}
+                </p>
+
+                <!-- Ligne 2 : meta -->
+                <div class="inbox-item__meta">
+                  <span class="inbox-item__priority-badge inbox-item__priority-badge--{{ getPriorityConfig(fb.priority).cls }}">
+                    {{ getPriorityConfig(fb.priority).label }}
+                  </span>
+                  <span class="inbox-item__category">{{ getCategoryLabel(fb.category) }}</span>
+                  <span class="inbox-item__date">{{ fb.createdAt | date:'dd MMM' }}</span>
                 </div>
-              }
 
-              <p class="kanban-card__summary">{{ fb.aiSummary || fb.content }}</p>
-              <div class="kanban-card__meta">
-                <span class="kanban-card__category">{{ getCategoryLabel(fb.category) }}</span>
-                <span class="kanban-card__date">{{ fb.createdAt | date:'dd/MM' }}</span>
               </div>
-            </article>
-          }
-        </div>
-      </div>
 
-    </div>
-  </section>
+              <!-- Action rapide : voir le feedback -->
+              <a
+                routerLink="/dashboard/feedbacks"
+                class="inbox-item__action"
+                aria-label="Voir ce feedback">
+                <svg viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="4 2 10 7 4 12"/>
+                </svg>
+              </a>
+
+            </li>
+          }
+        </ul>
+      }
+
+    </section>
 
   }
 
