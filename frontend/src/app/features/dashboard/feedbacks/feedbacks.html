@@ -135,7 +135,7 @@
         @for (fb of getColumnFeedbacks(col.status); track trackById($index, fb)) {
         <article class="fb-card" [class.fb-card--dragging]="dragging()?.id === fb.id"
           [class.fb-card--done]="fb.status === 'Done'" [attr.data-priority]="fb.priority" draggable="true"
-          (dragstart)="onDragStart(fb)" (dragend)="onDragEnd()">
+          (dragstart)="onDragStart(fb)" (dragend)="onDragEnd()" (click)="openDrawer(fb)">
 
           <!-- Badge IA -->
           @if (fb.aiAnalysisStatus !== 'Completed') {
@@ -240,5 +240,11 @@
 
   </div>
   }
-
+  <!-- ── Feedback Drawer ────────────────────────────────────────────────────── -->
+  <app-feedback-drawer
+    [feedback]="selectedFeedback()"
+    [open]="drawerOpen()"
+    (closed)="closeDrawer()"
+    (statusChanged)="onDrawerStatusChanged($event)">
+  </app-feedback-drawer>
 </div>

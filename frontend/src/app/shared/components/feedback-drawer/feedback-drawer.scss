@@ -1,0 +1,466 @@
+// feedback-drawer.scss
+// ─── Design system : 100% aligné avec --color-dark, --color-white,
+//     --color-border, --color-muted, --color-surface, --color-surface-lt,
+//     --radius-card, --radius-inner, --radius-pill, --font-base, --font-medium
+//     (identique à pricing.scss et payment-success.scss)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Overlay ──────────────────────────────────────────────────────────────────
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(20, 21, 26, 0);
+  pointer-events: none;
+  z-index: 200;
+  transition: background-color 0.3s ease;
+
+  &--visible {
+    background-color: rgba(20, 21, 26, 0.35);
+    pointer-events: auto;
+  }
+}
+
+// ── Panneau ───────────────────────────────────────────────────────────────────
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 480px;
+  max-width: calc(100vw - 48px);
+  background-color: var(--color-white);
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 201;
+
+  // Animation slide — transform uniquement, pas de opacity
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+
+  &--open {
+    transform: translateX(0);
+  }
+
+  // Ombre gauche subtile quand ouvert
+  &--open {
+    box-shadow: -8px 0 32px rgba(20, 21, 26, 0.08);
+  }
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+
+.drawer__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.drawer__header-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+// Badge priorité — reprend exactement les couleurs de fb-card__priority
+.drawer__priority-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-medium);
+  font-size: 12px;
+  font-weight: 500;
+
+  &--critical { background: #FFF1F2; color: #F43F5E; }
+  &--high     { background: #FFF7ED; color: #F59E0B; }
+  &--normal   { background: #EFF6FF; color: #3B82F6; }
+  &--low      { background: #F9FAFB; color: #9CA3AF; }
+}
+
+// Badge catégorie
+.drawer__category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-surface-lt);
+  border: 1px solid var(--color-border);
+  font-size: 12px;
+  color: var(--color-dark);
+}
+
+// Date
+.drawer__date {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+// Bouton fermer — identique à btn--secondary dans globals
+.drawer__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-inner);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-white);
+  cursor: pointer;
+  color: var(--color-muted);
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  svg { width: 14px; height: 14px; }
+
+  &:hover {
+    background-color: var(--color-surface-lt);
+    color: var(--color-dark);
+  }
+}
+
+// ── Corps scrollable ──────────────────────────────────────────────────────────
+
+.drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+// ── Sections ─────────────────────────────────────────────────────────────────
+
+.drawer__section {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-border);
+
+  &:first-child { padding-top: 0; }
+  &:last-child  { border-bottom: none; }
+
+  // Variant inline (label + valeur sur une ligne)
+  &--inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    .drawer__section-label { margin-bottom: 0; }
+  }
+}
+
+.drawer__section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-medium);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  margin-bottom: 10px;
+
+  svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+  }
+}
+
+// ── Résumé IA ─────────────────────────────────────────────────────────────────
+
+.drawer__ai-summary {
+  font-family: var(--font-medium);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--color-dark);
+  margin: 0;
+}
+
+// ── Badges IA (reprend exactement ai-badge de feedbacks.scss) ────────────────
+
+.drawer__ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: var(--radius-inner);
+
+  svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  &--pending {
+    background: #FFF7ED;
+    color: #C2410C;
+    border: 1px solid #FED7AA;
+  }
+
+  &--processing {
+    background: #EFF6FF;
+    color: #1D4ED8;
+    border: 1px solid #BFDBFE;
+  }
+
+  &--failed {
+    background: #FFF1F2;
+    color: #BE123C;
+    border: 1px solid #FECDD3;
+  }
+}
+
+.drawer__ai-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #F97316;
+  flex-shrink: 0;
+}
+
+.drawer__ai-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #BFDBFE;
+  border-top-color: #1D4ED8;
+  border-radius: 50%;
+  animation: drawer-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes drawer-spin {
+  to { transform: rotate(360deg); }
+}
+
+// ── Message original ──────────────────────────────────────────────────────────
+
+.drawer__original {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--color-dark);
+  margin: 0;
+  padding: 14px 16px;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-inner);
+  border-left: 3px solid var(--color-border);
+  font-style: italic;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+// ── Score de priorité ─────────────────────────────────────────────────────────
+
+.drawer__score {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.drawer__score-bar {
+  flex: 1;
+  height: 6px;
+  background-color: var(--color-surface);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.drawer__score-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+
+  &--critical { background: #F43F5E; }
+  &--high     { background: #F59E0B; }
+  &--normal   { background: #3B82F6; }
+}
+
+.drawer__score-value {
+  font-family: var(--font-medium);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-dark);
+  flex-shrink: 0;
+  min-width: 48px;
+  text-align: right;
+}
+
+// ── Sentiment ─────────────────────────────────────────────────────────────────
+
+.drawer__sentiment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface-lt);
+  color: var(--color-dark);
+
+  &--positive   { color: #059669; background: #ECFDF5; border-color: #A7F3D0; }
+  &--neutral    { color: var(--color-muted); }
+  &--negative   { color: #D97706; background: #FFFBEB; border-color: #FDE68A; }
+  &--frustrated { color: #DC2626; background: #FFF1F2; border-color: #FECDD3; }
+}
+
+// ── Action requise ────────────────────────────────────────────────────────────
+
+.drawer__action-required {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--radius-inner);
+  background: #FFF7ED;
+  border: 1px solid #FED7AA;
+  color: #C2410C;
+  font-family: var(--font-medium);
+  font-size: 13px;
+  font-weight: 500;
+
+  svg { width: 14px; height: 14px; flex-shrink: 0; }
+}
+
+// ── Topics ────────────────────────────────────────────────────────────────────
+
+.drawer__topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.drawer__topic {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-surface-lt);
+  border: 1px solid var(--color-border);
+  font-size: 12px;
+  color: var(--color-dark);
+  transition: background-color 0.15s ease;
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+.drawer__empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+.drawer__empty-text {
+  font-size: 14px;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+
+.drawer__footer {
+  padding: 16px 24px 24px;
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-surface-lt);
+  flex-shrink: 0;
+}
+
+.drawer__footer-label {
+  font-family: var(--font-medium);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  margin: 0 0 10px;
+}
+
+.drawer__status-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+// Boutons statut — reprend exactement btn--secondary du global
+.drawer__status-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border-radius: var(--radius-inner);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-white);
+  font-family: var(--font-medium);
+  font-size: 13px;
+  color: var(--color-dark);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+
+  &:hover:not(:disabled):not(.drawer__status-btn--active) {
+    background-color: var(--color-surface-lt);
+    border-color: rgba(20, 21, 26, 0.2);
+  }
+
+  &--active {
+    background-color: var(--color-dark);
+    color: var(--color-white);
+    border-color: var(--color-dark);
+    cursor: default;
+  }
+
+  &:disabled:not(.drawer__status-btn--active) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Spinner inline dans le bouton
+.drawer__btn-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(20, 21, 26, 0.2);
+  border-top-color: var(--color-dark);
+  border-radius: 50%;
+  animation: drawer-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+// ── Erreur de statut ──────────────────────────────────────────────────────────
+
+.drawer__status-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border-radius: var(--radius-inner);
+  background-color: #FFF1F2;
+  border: 1px solid #FECDD3;
+  font-size: 13px;
+  color: #BE123C;
+}
+
+// ── Responsive ───────────────────────────────────────────────────────────────
+
+@media (max-width: 600px) {
+  .drawer {
+    width: 100vw;
+    max-width: 100vw;
+  }
+}

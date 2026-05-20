@@ -15,10 +15,11 @@ import {
 } from './feedbacks.types';
 import { UserService } from '../../../core/services/user.service';
 import { DashboardContextService } from '../../../core/services/dashboard-context.service';
+import { FeedbackDrawer } from '../../../shared/components/feedback-drawer/feedback-drawer';
 
 @Component({
   selector: 'app-feedbacks',
-  imports: [CommonModule, FormsModule, DatePipe],
+  imports: [CommonModule, FormsModule, DatePipe, FeedbackDrawer],
   templateUrl: './feedbacks.html',
   styleUrl: './feedbacks.scss',
 })
@@ -39,6 +40,10 @@ export class Feedbacks implements OnInit, OnDestroy {
   totalCount = signal(0);
   dragging = signal<Feedback | null>(null);
   exporting = signal(false);
+
+  // ─── Drawer ───────────────────────────────────────────────────────────────
+  selectedFeedback = signal<Feedback | null>(null);
+  drawerOpen = signal(false);
 
   // ─── Filtres ──────────────────────────────────────────────────────────────
   searchValue = signal('');
@@ -279,6 +284,28 @@ export class Feedbacks implements OnInit, OnDestroy {
         );
       }
     });
+  }
+
+  // ─── Drawer ───────────────────────────────────────────────────────────────
+  openDrawer(feedback: Feedback): void {
+    this.selectedFeedback.set(feedback);
+    this.drawerOpen.set(true);
+  }
+
+  closeDrawer(): void {
+    this.drawerOpen.set(false);
+    // On laisse selectedFeedback en place pendant l'animation de fermeture (300ms)
+    setTimeout(() => this.selectedFeedback.set(null), 320);
+  }
+
+  onDrawerStatusChanged(event: { id: string; status: FeedbackStatus }): void {
+    this.feedbacks.update(list =>
+      list.map(f => f.id === event.id ? { ...f, status: event.status } : f)
+    );
+    // Met à jour aussi le feedback ouvert dans le drawer
+    this.selectedFeedback.update(f =>
+      f?.id === event.id ? { ...f, status: event.status } : f
+    );
   }
 
   // helper sentiment
