@@ -1,26 +1,37 @@
 <div class="trends">
 
-  <!-- ═══════════════════════════════════════════════════════
+  <!-- ══════════════════════════════════════════════════════════
        PAYWALL — utilisateur Free
-       ═══════════════════════════════════════════════════════ -->
+       ══════════════════════════════════════════════════════════ -->
   @if (!isPro()) {
-    <app-paywall [title]="'Graphique de tendances'" [subtitle]="'L\'accès aux graphiques de tendances est disponible à partir du plan'">
+    <app-paywall
+      [title]="'Analyse des tendances'"
+      [subtitle]="'Les graphiques et insights IA sont disponibles à partir du plan'">
     </app-paywall>
 
   } @else {
-    <!-- ── En-tête ──────────────────────────────────────────── -->
+
+    <!-- ══════════════════════════════════════════════════════════
+         HEADER
+         ══════════════════════════════════════════════════════════ -->
     <header class="trends__header">
-      <div>
+      <div class="trends__header-left">
         <h1 class="trends__title">Tendances</h1>
-        <p class="trends__subtitle">Évolution de vos feedbacks dans le temps</p>
+        <p class="trends__subtitle">
+          @if (currentProject()) {
+            Analyse de <strong>{{ currentProject()!.name }}</strong>
+          } @else {
+            Analyse globale de tous vos projets
+          }
+        </p>
       </div>
 
-      <!-- Sélecteur de période -->
-      <div class="period-toggle">
+      <div class="period-toggle" role="group" aria-label="Sélectionner la période">
         @for (p of periods; track p.value) {
           <button
             class="period-toggle__btn"
             [class.period-toggle__btn--active]="period() === p.value"
+            [attr.aria-pressed]="period() === p.value"
             (click)="setPeriod(p.value)">
             {{ p.label }}
           </button>
@@ -28,275 +39,320 @@
       </div>
     </header>
 
-    <!-- ── Loading ───────────────────────────────────────────── -->
+    <!-- ══════════════════════════════════════════════════════════
+         LOADING
+         ══════════════════════════════════════════════════════════ -->
     @if (loading()) {
-      <div class="trends__loading">
-        <div class="skeleton skeleton--summary"></div>
-        <div class="skeleton skeleton--chart"></div>
-        <div class="skeleton skeleton--breakdown"></div>
+      <div class="trends__loading" aria-busy="true" aria-label="Chargement">
+        <div class="t-skel t-skel--kpi"></div>
+        <div class="t-skel t-skel--insights"></div>
+        <div class="t-skel t-skel--chart"></div>
+        <div class="t-skel t-skel--breakdown"></div>
       </div>
     }
 
-    <!-- ── Erreur ─────────────────────────────────────────────── -->
+    <!-- ══════════════════════════════════════════════════════════
+         ERREUR
+         ══════════════════════════════════════════════════════════ -->
     @if (error()) {
-      <div class="trends__error">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor"
-            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="10" cy="10" r="8"/>
-          <line x1="10" y1="6" x2="10" y2="10.5"/>
-          <circle cx="10" cy="14" r="0.5" fill="currentColor"/>
+      <div class="trends__error" role="alert">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
+             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="8" cy="8" r="7"/>
+          <line x1="8" y1="5" x2="8" y2="8.5"/>
+          <circle cx="8" cy="11" r="0.5" fill="currentColor"/>
         </svg>
         {{ error() }}
         <button class="trends__error-retry" (click)="load()">Réessayer</button>
       </div>
     }
 
-    @if (!loading() && !error() && data()) {
+    @if (!loading() && !error()) {
 
-      <!-- ── KPI Cards ─────────────────────────────────────────── -->
-      <div class="kpi-grid">
-
-        <div class="kpi-card">
-          <span class="kpi-card__label">Total sur la période</span>
-          <span class="kpi-card__value">{{ summary()?.totalPeriod }}</span>
-          <div class="kpi-card__trend" [class.kpi-card__trend--up]="growthPositive()"
-              [class.kpi-card__trend--down]="!growthPositive()">
-            @if (growthPositive()) {
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
-                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="2 12 8 6 12 10 14 4"/>
-              </svg>
-            } @else {
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
-                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="2 4 8 10 12 6 14 12"/>
-              </svg>
-            }
-            {{ growthLabel() }} vs période précédente
+      <!-- ════════════════════════════════════════════════════════
+           EMPTY STATE — 0 feedbacks
+           ════════════════════════════════════════════════════════ -->
+      @if (!hasData()) {
+        <div class="trends__empty">
+          <div class="trends__empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor"
+                 stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 36 18 22 26 30 36 14 42 20"/>
+              <rect x="4" y="4" width="40" height="40" rx="4" stroke-dasharray="4 3"/>
+            </svg>
           </div>
+          <p class="trends__empty-title">Aucune donnée sur cette période</p>
+          <p class="trends__empty-desc">
+            Partagez votre widget client pour commencer à recevoir des feedbacks et voir vos tendances se dessiner.
+          </p>
+          <a routerLink="/dashboard/widget" class="trends__empty-cta">
+            Configurer le widget →
+          </a>
         </div>
+      }
 
-        <div class="kpi-card">
-          <span class="kpi-card__label">Moyenne par jour</span>
-          <span class="kpi-card__value">{{ summary()?.avgPerDay }}</span>
-          <span class="kpi-card__sub">feedbacks / jour</span>
-        </div>
+      @if (hasData()) {
 
-        <div class="kpi-card kpi-card--accent">
-          <span class="kpi-card__label">Pic de la période</span>
-          <span class="kpi-card__value">{{ summary()?.peakCount }}</span>
-          <span class="kpi-card__sub">{{ formatPeakDate(summary()?.peakDate ?? '') }}</span>
-        </div>
+        <!-- ══════════════════════════════════════════════════════
+             KPI CARDS
+             ══════════════════════════════════════════════════════ -->
+        <section class="t-kpi" aria-label="Indicateurs clés">
 
-        <div class="kpi-card">
-          <span class="kpi-card__label">Période précédente</span>
-          <span class="kpi-card__value">{{ summary()?.totalPrevious }}</span>
-          <span class="kpi-card__sub">feedbacks</span>
-        </div>
-
-      </div>
-
-      <!-- ── Graphique principal ────────────────────────────── -->
-      <section class="chart-section">
-
-        <div class="chart-section__header">
-          <h2 class="chart-section__title">Volume journalier</h2>
-
-          <!-- Toggle bar / line -->
-          <div class="chart-type-toggle">
-            <button
-              class="chart-type-btn"
-              [class.chart-type-btn--active]="chartType() === 'bar'"
-              (click)="setChartType('bar')"
-              title="Barres">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
-                  stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="1" y="8"  width="4" height="7" rx="1"/>
-                <rect x="6" y="4"  width="4" height="11" rx="1"/>
-                <rect x="11" y="1" width="4" height="14" rx="1"/>
-              </svg>
-            </button>
-            <button
-              class="chart-type-btn"
-              [class.chart-type-btn--active]="chartType() === 'line'"
-              (click)="setChartType('line')"
-              title="Courbe">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
-                  stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="1 12 5 7 9 9 15 3"/>
-              </svg>
-            </button>
+          <div class="t-kpi-card">
+            <span class="t-kpi-card__label">Total sur la période</span>
+            <span class="t-kpi-card__value">{{ summary()?.totalPeriod ?? 0 }}</span>
+            <div
+              class="t-kpi-card__growth"
+              [class.t-kpi-card__growth--up]="growthPositive()"
+              [class.t-kpi-card__growth--down]="!growthPositive()">
+              @if (growthPositive()) {
+                <svg viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="1 10 5 5 9 7 13 2"/>
+                </svg>
+              } @else {
+                <svg viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="1 4 5 9 9 7 13 12"/>
+                </svg>
+              }
+              {{ growthLabel() }} vs période préc.
+            </div>
           </div>
-        </div>
 
-        <!-- Graphique en barres -->
-        @if (chartType() === 'bar') {
-          <div class="bar-chart">
-            @if (volume().length === 0 || maxVolume() === 0) {
-              <div class="chart-empty">Aucune donnée sur cette période.</div>
-            } @else {
-              <div class="bar-chart__bars">
-                @for (point of volume(); track trackByDate($index, point)) {
-                  <div class="bar-chart__item">
-                    <div class="bar-chart__bar-wrap">
-                      <div
-                        class="bar-chart__bar"
-                        [style.height.%]="getBarHeight(point.count)"
-                        [title]="point.date + ' : ' + point.count + ' feedback(s)'">
-                        @if (point.count > 0) {
-                          <span class="bar-chart__value">{{ point.count }}</span>
-                        }
-                      </div>
-                    </div>
-                    @if (showLabel($index)) {
-                      <span class="bar-chart__label">
-                        {{ point.date | date:'dd/MM' }}
-                      </span>
-                    }
+          <div class="t-kpi-card">
+            <span class="t-kpi-card__label">Moyenne / jour</span>
+            <span class="t-kpi-card__value">{{ summary()?.avgPerDay ?? 0 }}</span>
+            <span class="t-kpi-card__sub">feedbacks par jour</span>
+          </div>
+
+          <div class="t-kpi-card t-kpi-card--peak">
+            <span class="t-kpi-card__label">Pic de la période</span>
+            <span class="t-kpi-card__value">{{ summary()?.peakCount ?? 0 }}</span>
+            <span class="t-kpi-card__sub">{{ formatPeakDate(summary()?.peakDate ?? '') }}</span>
+          </div>
+
+          <div class="t-kpi-card">
+            <span class="t-kpi-card__label">Période précédente</span>
+            <span class="t-kpi-card__value">{{ summary()?.totalPrevious ?? 0 }}</span>
+            <span class="t-kpi-card__sub">feedbacks</span>
+          </div>
+
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════
+             AI INSIGHTS
+             ══════════════════════════════════════════════════════ -->
+        @if (aiInsights().length > 0) {
+          <section class="t-insights" aria-label="Insights IA">
+
+            <div class="t-insights__header">
+              <span class="t-insights__label">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                     stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M8 2l1.5 3 3.5.5-2.5 2.5.5 3.5L8 10l-3 1.5.5-3.5L3 5.5l3.5-.5L8 2z"/>
+                </svg>
+                Insights IA
+              </span>
+              <span class="t-insights__period">sur {{ period() }} jours</span>
+            </div>
+
+            <div class="t-insights__grid">
+              @for (insight of aiInsights(); track insight.title) {
+                <div class="t-insight-card t-insight-card--{{ insight.type }}">
+                  <span class="t-insight-card__emoji" aria-hidden="true">{{ insight.emoji }}</span>
+                  <div class="t-insight-card__body">
+                    <p class="t-insight-card__title">{{ insight.title }}</p>
+                    <p class="t-insight-card__desc">{{ insight.desc }}</p>
                   </div>
-                }
-              </div>
-            }
-          </div>
+                </div>
+              }
+            </div>
+
+          </section>
         }
 
-        <!-- Graphique en courbe SVG -->
-        @if (chartType() === 'line') {
-          <div class="line-chart">
-            @if (volume().length === 0 || maxVolume() === 0) {
-              <div class="chart-empty">Aucune donnée sur cette période.</div>
-            } @else {
-              <svg
-                class="line-chart__svg"
-                viewBox="0 0 600 160"
-                preserveAspectRatio="none"
-                xmlns="http://www.w3.org/2000/svg">
+        <!-- ══════════════════════════════════════════════════════
+             GRAPHIQUE PRINCIPAL
+             ══════════════════════════════════════════════════════ -->
+        <section class="t-chart-section">
 
-                <defs>
-                  <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%"   stop-color="#3B82F6" stop-opacity="0.25"/>
-                    <stop offset="100%" stop-color="#3B82F6" stop-opacity="0"/>
-                  </linearGradient>
-                </defs>
+          <div class="t-chart-section__header">
+            <h2 class="t-chart-section__title">Volume journalier</h2>
 
-                <!-- Aire sous la courbe -->
-                <path
-                  [attr.d]="areaPath()"
-                  fill="url(#areaGrad)"
-                  class="line-chart__area"/>
+            <div class="t-chart-toggle" role="group" aria-label="Type de graphique">
+              <button
+                class="t-chart-toggle__btn"
+                [class.t-chart-toggle__btn--active]="chartType() === 'bar'"
+                [attr.aria-pressed]="chartType() === 'bar'"
+                (click)="setChartType('bar')"
+                title="Barres">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="1" y="8"  width="4" height="7" rx="1"/>
+                  <rect x="6" y="4"  width="4" height="11" rx="1"/>
+                  <rect x="11" y="1" width="4" height="14" rx="1"/>
+                </svg>
+              </button>
+              <button
+                class="t-chart-toggle__btn"
+                [class.t-chart-toggle__btn--active]="chartType() === 'line'"
+                [attr.aria-pressed]="chartType() === 'line'"
+                (click)="setChartType('line')"
+                title="Courbe">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="1 12 5 7 9 9 15 3"/>
+                </svg>
+              </button>
+            </div>
+          </div>
 
-                <!-- Ligne de la courbe -->
-                <path
-                  [attr.d]="linePath()"
-                  fill="none"
-                  stroke="#3B82F6"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="line-chart__line"/>
+          <!-- Graphique barres -->
+          @if (chartType() === 'bar') {
+            <div class="t-bar-chart">
+              @if (volume().length === 0 || maxVolume() === 0) {
+                <div class="t-chart-empty">Aucune donnée sur cette période.</div>
+              } @else {
+                <div class="t-bar-chart__bars">
+                  @for (point of volume(); track trackByDate($index, point)) {
+                    <div class="t-bar-chart__item">
+                      <div class="t-bar-chart__bar-wrap">
+                        <div
+                          class="t-bar-chart__bar"
+                          [style.height.%]="getBarHeight(point.count)"
+                          [title]="point.date + ' : ' + point.count + ' feedback(s)'">
+                          @if (point.count > 0 && volume().length <= 14) {
+                            <span class="t-bar-chart__value">{{ point.count }}</span>
+                          }
+                        </div>
+                      </div>
+                      @if (showLabel($index)) {
+                        <span class="t-bar-chart__label">{{ point.date | date:'dd/MM' }}</span>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
 
-                <!-- Points interactifs -->
-                @for (pt of linePoints(); track pt.date) {
-                  <g class="line-chart__point-group">
+          <!-- Graphique courbe SVG -->
+          @if (chartType() === 'line') {
+            <div class="t-line-chart">
+              @if (volume().length === 0 || maxVolume() === 0) {
+                <div class="t-chart-empty">Aucune donnée sur cette période.</div>
+              } @else {
+                <svg
+                  class="t-line-chart__svg"
+                  viewBox="0 0 600 160"
+                  preserveAspectRatio="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true">
+                  <defs>
+                    <linearGradient id="trendAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%"   stop-color="#3B82F6" stop-opacity="0.2"/>
+                      <stop offset="100%" stop-color="#3B82F6" stop-opacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <path [attr.d]="areaPath()" fill="url(#trendAreaGrad)"/>
+                  <path
+                    [attr.d]="linePath()"
+                    fill="none"
+                    stroke="#3B82F6"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"/>
+                  @for (pt of linePoints(); track pt.date) {
                     <circle
-                      [attr.cx]="pt.x"
-                      [attr.cy]="pt.y"
-                      r="4"
-                      fill="white"
-                      stroke="#3B82F6"
-                      stroke-width="2"
-                      class="line-chart__dot">
+                      [attr.cx]="pt.x" [attr.cy]="pt.y" r="4"
+                      fill="white" stroke="#3B82F6" stroke-width="2">
                       <title>{{ pt.date | date:'dd/MM/yyyy' }} — {{ pt.count }} feedback(s)</title>
                     </circle>
-                  </g>
-                }
-              </svg>
-
-              <!-- Labels X -->
-              <div class="line-chart__labels">
-                @for (point of volume(); track point.date; let i = $index) {
-                  @if (showLabel(i)) {
-                    <span class="line-chart__label">
-                      {{ point.date | date:'dd/MM' }}
-                    </span>
                   }
+                </svg>
+                <div class="t-line-chart__labels">
+                  @for (point of volume(); track point.date; let i = $index) {
+                    @if (showLabel(i)) {
+                      <span class="t-line-chart__label">{{ point.date | date:'dd/MM' }}</span>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          }
+
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════
+             BREAKDOWNS
+             ══════════════════════════════════════════════════════ -->
+        <div class="t-breakdowns">
+
+          <!-- Par catégorie -->
+          <section class="t-breakdown-card">
+            <h2 class="t-breakdown-card__title">Par catégorie</h2>
+            @if (categories().length === 0) {
+              <p class="t-breakdown-card__empty">Aucune donnée.</p>
+            } @else {
+              <div class="t-breakdown-list">
+                @for (cat of categories(); track cat.category) {
+                  <div class="t-breakdown-item">
+                    <div class="t-breakdown-item__row">
+                      <span class="t-breakdown-item__label">{{ getCategoryLabel(cat.category) }}</span>
+                      <span class="t-breakdown-item__count">
+                        {{ cat.count }}
+                        <span class="t-breakdown-item__pct">{{ cat.percentage }}%</span>
+                      </span>
+                    </div>
+                    <div class="t-breakdown-item__track">
+                      <div
+                        class="t-breakdown-item__fill"
+                        [style.width.%]="cat.percentage"
+                        [style.background]="getCategoryColor(cat.category)">
+                      </div>
+                    </div>
+                  </div>
                 }
               </div>
             }
-          </div>
-        }
+          </section>
 
-      </section>
-
-      <!-- ── Breakdowns ─────────────────────────────────────── -->
-      <div class="breakdowns">
-
-        <!-- Catégories -->
-        <section class="breakdown-card">
-          <h2 class="breakdown-card__title">Par catégorie</h2>
-
-          @if (categories().length === 0) {
-            <p class="breakdown-card__empty">Aucune donnée.</p>
-          } @else {
-            <div class="breakdown-list">
-              @for (cat of categories(); track cat.category) {
-                <div class="breakdown-item">
-                  <div class="breakdown-item__header">
-                    <span class="breakdown-item__label">
-                      {{ getCategoryLabel(cat.category) }}
-                    </span>
-                    <span class="breakdown-item__count">
-                      {{ cat.count }}
-                      <span class="breakdown-item__pct">{{ cat.percentage }}%</span>
-                    </span>
-                  </div>
-                  <div class="breakdown-item__bar-bg">
-                    <div
-                      class="breakdown-item__bar"
-                      [style.width.%]="cat.percentage"
-                      [style.background]="getCategoryColor(cat.category)">
+          <!-- Par priorité -->
+          <section class="t-breakdown-card">
+            <h2 class="t-breakdown-card__title">Par priorité</h2>
+            @if (priorities().length === 0) {
+              <p class="t-breakdown-card__empty">Aucune donnée.</p>
+            } @else {
+              <div class="t-breakdown-list">
+                @for (pri of priorities(); track pri.priority) {
+                  <div class="t-breakdown-item">
+                    <div class="t-breakdown-item__row">
+                      <span class="t-breakdown-item__label">{{ getPriorityLabel(pri.priority) }}</span>
+                      <span class="t-breakdown-item__count">
+                        {{ pri.count }}
+                        <span class="t-breakdown-item__pct">{{ pri.percentage }}%</span>
+                      </span>
+                    </div>
+                    <div class="t-breakdown-item__track">
+                      <div
+                        class="t-breakdown-item__fill"
+                        [style.width.%]="pri.percentage"
+                        [style.background]="getPriorityColor(pri.priority)">
+                      </div>
                     </div>
                   </div>
-                </div>
-              }
-            </div>
-          }
-        </section>
+                }
+              </div>
+            }
+          </section>
 
-        <!-- Priorités -->
-        <section class="breakdown-card">
-          <h2 class="breakdown-card__title">Par priorité</h2>
+        </div>
 
-          @if (priorities().length === 0) {
-            <p class="breakdown-card__empty">Aucune donnée.</p>
-          } @else {
-            <div class="breakdown-list">
-              @for (pri of priorities(); track pri.priority) {
-                <div class="breakdown-item">
-                  <div class="breakdown-item__header">
-                    <span class="breakdown-item__label">
-                      {{ getPriorityLabel(pri.priority) }}
-                    </span>
-                    <span class="breakdown-item__count">
-                      {{ pri.count }}
-                      <span class="breakdown-item__pct">{{ pri.percentage }}%</span>
-                    </span>
-                  </div>
-                  <div class="breakdown-item__bar-bg">
-                    <div
-                      class="breakdown-item__bar"
-                      [style.width.%]="pri.percentage"
-                      [style.background]="getPriorityColor(pri.priority)">
-                    </div>
-                  </div>
-                </div>
-              }
-            </div>
-          }
-        </section>
-
-      </div>
+      }
 
     }
+
   }
+
 </div>
