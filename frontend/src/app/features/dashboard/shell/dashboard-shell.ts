@@ -1,6 +1,10 @@
-import { Component, HostListener, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import {
+  Component, HostListener, inject,
+  OnInit, signal, computed
+} from '@angular/core';
+import { CommonModule, TitleCasePipe } from '@angular/common';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserService } from '../../../core/services/user.service';
 import { DashboardContextService } from '../../../core/services/dashboard-context.service';
@@ -16,16 +20,21 @@ interface NavItem {
 
 @Component({
   selector: 'app-dashboard-shell',
-  imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet, ProjectSwitcher],
+  standalone: true,
+  imports: [CommonModule, TitleCasePipe, RouterLink, RouterLinkActive, RouterOutlet, ProjectSwitcher],
   templateUrl: './dashboard-shell.html',
   styleUrl: './dashboard-shell.scss',
 })
 export class DashboardShell implements OnInit {
+
+  // ─── Services ─────────────────────────────────────────────────────────────
   private readonly auth = inject(AuthService);
   private readonly userService = inject(UserService);
   private readonly dashboardContext = inject(DashboardContextService);
   private readonly billingService = inject(BillingService);
+  private readonly router = inject(Router);
 
+  // ─── Signals exposés ──────────────────────────────────────────────────────
   readonly profile = this.userService.profile;
   readonly fullName = this.userService.fullName;
   readonly initials = this.userService.initials;
@@ -36,27 +45,68 @@ export class DashboardShell implements OnInit {
   mobileMenuOpen = signal(false);
   logoutLoading = signal(false);
   quota = signal<QuotaResult | null>(null);
+  currentUrl = signal('');
 
-  navItems: NavItem[] = [
+  // ─── Quota helpers ────────────────────────────────────────────────────────
+  readonly quotaPercent = computed(() => {
+    const q = this.quota();
+    if (!q || q.feedbacksLimit <= 0) return 0;
+    return Math.min(Math.round((q.usagePercent / q.feedbacksLimit) * 100), 100);
+  });
+
+  // ─── Label page courante (breadcrumb topbar) ──────────────────────────────
+  readonly currentPageLabel = computed(() => {
+    const url = this.currentUrl();
+    const map: Record<string, string> = {
+      '/dashboard': 'Vue d\'ensemble',
+      '/dashboard/projects': 'Projets',
+      '/dashboard/feedbacks': 'Feedbacks',
+      '/dashboard/trends': 'Tendances',
+      '/dashboard/widget': 'Widget',
+      '/dashboard/settings': 'Paramètres',
+      '/dashboard/help': 'Aide',
+      '/dashboard/billing': 'Facturation',
+    };
+    // Correspondance exacte d'abord, puis par préfixe
+    if (map[url]) return map[url];
+    const match = Object.entries(map).find(([k]) => url.startsWith(k) && k !== '/dashboard');
+    return match ? match[1] : 'Vue d\'ensemble';
+  });
+
+  // ─── Navigation principale ────────────────────────────────────────────────
+  readonly navItems: NavItem[] = [
     { label: 'Vue d\'ensemble', path: '/dashboard', icon: 'home' },
-    { label: 'Projets', path: '/dashboard/projects', icon: 'folder', badge: 3 },
-    { label: 'Feedbacks', path: '/dashboard/feedbacks', icon: 'messages', badge: 12 },
+    { label: 'Projets', path: '/dashboard/projects', icon: 'folder' },
+    { label: 'Feedbacks', path: '/dashboard/feedbacks', icon: 'messages' },
     { label: 'Tendances', path: '/dashboard/trends', icon: 'chart' },
     { label: 'Widget', path: '/dashboard/widget', icon: 'code' },
   ];
 
-  bottomNavItems: NavItem[] = [
+  // ─── Navigation secondaire ────────────────────────────────────────────────
+  readonly bottomNavItems: NavItem[] = [
     { label: 'Paramètres', path: '/dashboard/settings', icon: 'settings' },
     { label: 'Aide', path: '/dashboard/help', icon: 'help' },
+    { label: 'Facturation', path: '/dashboard/billing', icon: 'billing' },
   ];
 
+  // ─── Lifecycle ────────────────────────────────────────────────────────────
   ngOnInit(): void {
+    // Charger le quota
     this.billingService.getQuota().subscribe({
       next: quota => this.quota.set(quota),
-      error: () => { /* silencieux — la sidebar reste sans barre de quota */ }
+      error: () => { /* silencieux */ }
+    });
+
+    // Suivre l'URL courante pour le breadcrumb
+    this.currentUrl.set(this.router.url.split('?')[0]);
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd)
+    ).subscribe(e => {
+      this.currentUrl.set((e as NavigationEnd).urlAfterRedirects.split('?')[0]);
     });
   }
 
+  // ─── Actions ──────────────────────────────────────────────────────────────
   logout(): void {
     if (this.logoutLoading()) return;
     this.logoutLoading.set(true);
@@ -77,8 +127,7 @@ export class DashboardShell implements OnInit {
     document.body.style.overflow = '';
   }
 
+  // ─── Keyboard ─────────────────────────────────────────────────────────────
   @HostListener('window:keydown.escape')
-  onEscape(): void {
-    this.closeMobileMenu();
-  }
+  onEscape(): void { this.closeMobileMenu(); }
 }

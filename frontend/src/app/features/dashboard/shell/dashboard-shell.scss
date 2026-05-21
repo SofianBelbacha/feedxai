@@ -1,101 +1,83 @@
-/* =============================================
-   DASHBOARD SHELL — Layout sidebar + topbar
-   ============================================= */
+// dashboard-shell.scss
+// ─── Design system : --color-dark, --color-white, --color-border,
+//     --color-muted, --color-surface, --color-surface-lt,
+//     --radius-inner, --radius-card, --font-medium, --font-base
+// ─────────────────────────────────────────────────────────────────────────────
 
-// ── Variables locales ─────────────────────────
-
-$sidebar-width:           240px;
-$sidebar-width-collapsed: 64px;
-$topbar-height:           56px;
-$transition-speed:        0.22s;
-$transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
+$sidebar-w:           240px;
+$sidebar-w-collapsed:  64px;
+$topbar-h:             56px;
+$speed:               0.22s;
+$ease:                cubic-bezier(0.4, 0, 0.2, 1);
 
 
-// =============================================
+// ══════════════════════════════════════════════════════════════
 // SHELL — grille principale
-// =============================================
+// ══════════════════════════════════════════════════════════════
 
 .shell {
-  display: flex;  
+  display: flex;
   min-height: 100vh;
   background-color: var(--color-surface-lt);
 }
 
 
-// =============================================
+// ══════════════════════════════════════════════════════════════
 // SIDEBAR
-// =============================================
+// ══════════════════════════════════════════════════════════════
 
 .sidebar {
   position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
-  width: $sidebar-width;
+  width: $sidebar-w;
   background-color: var(--color-white);
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   z-index: 50;
   overflow: hidden;
-  transition: width $transition-speed $transition-ease;
+  transition: width $speed $ease;
 
-  .shell--collapsed & {
-    width: $sidebar-width-collapsed;
-  }
+  .shell--collapsed & { width: $sidebar-w-collapsed; }
 }
 
-// ── Logo ──────────────────────────────────────
+// ── Logo ──────────────────────────────────────────────────────
 
 .sidebar__logo {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: $topbar-height;
+  height: $topbar-h;
   padding: 0 12px 0 16px;
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 
-  // Centrage de l'icône seule quand collapsed
   .shell--collapsed & {
     justify-content: center;
     padding: 0;
-    cursor: pointer;
   }
 }
 
 .sidebar__logo-link {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
-  color: var(--color-dark);
   text-decoration: none;
   overflow: hidden;
-  min-width: 0;
   flex: 1;
+  min-width: 0;
 
-  // En mode collapsed : centré, pas de flex-grow
-  .shell--collapsed & {
-    flex: none;
-  }
+  .shell--collapsed & { flex: none; }
 }
 
 .sidebar__logo-icon {
   width: 120px;
+  height: auto;
   flex-shrink: 0;
-}
 
-.shell--collapsed .sidebar__logo-icon {
-  width: 25px;
-}
-
-.sidebar__logo-text {
-  font-family: var(--font-medium);
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
+  &--sm { width: 26px; }
 }
 
 .sidebar__collapse-btn {
@@ -104,7 +86,7 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: var(--radius-inner);
   background: none;
   border: none;
   cursor: pointer;
@@ -120,16 +102,17 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
-// ── Navigation ────────────────────────────────
+// ── Navigation ────────────────────────────────────────────────
 
 .sidebar__nav {
   display: flex;
   flex-direction: column;
   padding: 8px;
   gap: 2px;
+  flex-shrink: 0;
 }
 
-.sidebar__nav-group-label {
+.sidebar__nav-label {
   font-size: 10px;
   font-weight: 500;
   text-transform: uppercase;
@@ -137,6 +120,7 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--color-muted);
   padding: 6px 8px 4px;
   white-space: nowrap;
+  margin: 0;
 }
 
 .sidebar__nav-item {
@@ -154,7 +138,6 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
   overflow: hidden;
   transition: background-color 0.12s ease, color 0.12s ease;
-  position: relative;
 
   &:hover {
     background-color: var(--color-surface-lt);
@@ -164,13 +147,9 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
   &--active {
     background-color: var(--color-surface);
     color: var(--color-dark);
-
-    .sidebar__nav-icon svg {
-      color: var(--color-dark);
-    }
   }
 
-  // Mode collapsed : centré, sans label
+  // Mode collapsed : icône centrée
   &--collapsed {
     justify-content: center;
     padding: 0;
@@ -188,10 +167,10 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
   height: 20px;
   flex-shrink: 0;
 
-  svg { width: 16px; height: 16px; color: currentColor; }
+  svg { width: 16px; height: 16px; }
 }
 
-.sidebar__nav-label {
+.sidebar__nav-label-text {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -208,32 +187,113 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
   background-color: var(--color-dark);
   color: var(--color-white);
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
   flex-shrink: 0;
+  line-height: 1;
 }
 
-// Spacer
+// ── Spacer ────────────────────────────────────────────────────
 
 .sidebar__spacer { flex: 1; }
 
-// Navigation bottom
+// ── Quota bar ─────────────────────────────────────────────────
+
+.sidebar__quota {
+  margin: 0 8px 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-inner);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface-lt);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex-shrink: 0;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+
+  &--warning {
+    border-color: #FED7AA;
+    background-color: #FFFBEB;
+  }
+
+  &--danger {
+    border-color: #FECDD3;
+    background-color: #FFF1F2;
+  }
+}
+
+.sidebar__quota-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.sidebar__quota-text {
+  font-size: 11px;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.sidebar__quota-count {
+  font-family: var(--font-medium);
+  font-size: 11px;
+  color: var(--color-dark);
+  white-space: nowrap;
+}
+
+.sidebar__quota-sep {
+  color: var(--color-muted);
+  margin: 0 1px;
+}
+
+.sidebar__quota-track {
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--color-border);
+  overflow: hidden;
+}
+
+.sidebar__quota-fill {
+  height: 100%;
+  border-radius: 2px;
+  background-color: var(--color-dark);
+  transition: width 0.5s ease;
+
+  .sidebar__quota--warning & { background-color: #F59E0B; }
+  .sidebar__quota--danger &  { background-color: #EF4444; }
+}
+
+.sidebar__quota-cta {
+  font-family: var(--font-medium);
+  font-size: 11px;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+
+  .sidebar__quota--danger &  { color: #DC2626; }
+  .sidebar__quota--warning & { color: #D97706; }
+
+  &:hover { opacity: 0.75; }
+}
+
+// ── Navigation secondaire ─────────────────────────────────────
 
 .sidebar__nav--bottom {
   border-top: 1px solid var(--color-border);
   padding-top: 8px;
 }
 
-// ── Profil utilisateur ────────────────────────
+// ── Profil utilisateur ────────────────────────────────────────
 
 .sidebar__user {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 8px;
+  margin: 4px 8px 12px;
   border-radius: var(--radius-inner);
-  margin: 4px 8px 8px;
   border: 1px solid var(--color-border);
   background-color: var(--color-surface-lt);
+  flex-shrink: 0;
 
   &--collapsed {
     justify-content: center;
@@ -281,21 +341,18 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
   text-overflow: ellipsis;
 }
 
-.sidebar__user-email {
+.sidebar__user-plan {
   font-size: 11px;
   color: var(--color-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .sidebar__user-logout {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-inner);
   background: none;
   border: none;
   cursor: pointer;
@@ -309,12 +366,26 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
     background-color: var(--color-border);
     color: var(--color-dark);
   }
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
+.sidebar__logout-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-muted);
+  border-radius: 50%;
+  animation: shell-spin 0.7s linear infinite;
+}
 
-// =============================================
+@keyframes shell-spin { to { transform: rotate(360deg); } }
+
+
+// ══════════════════════════════════════════════════════════════
 // ZONE PRINCIPALE
-// =============================================
+// ══════════════════════════════════════════════════════════════
 
 .shell__main {
   display: flex;
@@ -322,21 +393,16 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 100vh;
   min-width: 0;
   flex: 1;
+  margin-left: $sidebar-w;
+  transition: margin-left $speed $ease;
 
-  // Compense la sidebar fixed
-  margin-left: $sidebar-width;
-  transition: margin-left $transition-speed $transition-ease;
-
-  .shell--collapsed & {
-    margin-left: $sidebar-width-collapsed;
-  }
+  .shell--collapsed & { margin-left: $sidebar-w-collapsed; }
 }
 
 
-
-// =============================================
+// ══════════════════════════════════════════════════════════════
 // TOPBAR
-// =============================================
+// ══════════════════════════════════════════════════════════════
 
 .topbar {
   position: sticky;
@@ -345,22 +411,21 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   gap: 8px;
-  height: $topbar-height;
+  height: $topbar-h;
   padding: 0 24px;
   background-color: var(--color-white);
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
-// Burger mobile (caché sur desktop)
-
+// Burger mobile (masqué desktop)
 .topbar__burger {
   display: none;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--radius-inner);
   background: none;
   border: none;
   cursor: pointer;
@@ -371,13 +436,14 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
   &:hover { background-color: var(--color-surface-lt); }
 }
 
+// Bouton expand (sidebar collapsed, desktop)
 .topbar__expand-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: var(--radius-inner);
   background: none;
   border: none;
   cursor: pointer;
@@ -393,14 +459,14 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
-// Fil d'Ariane
-
+// Breadcrumb
 .topbar__breadcrumb {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex: 1;               // ← pousse les actions vers la droite
+  flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .topbar__breadcrumb-sep {
@@ -414,6 +480,16 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 13px;
   color: var(--color-muted);
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.topbar__breadcrumb-project {
+  font-size: 13px;
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
 }
 
 .topbar__breadcrumb-current {
@@ -427,69 +503,11 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 // Actions
-
 .topbar__actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-}
-
-.topbar__action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 14px;
-  border-radius: var(--radius-inner);
-  font-family: var(--font-medium);
-  font-size: 13px;
-  cursor: pointer;
-  border: none;
-  white-space: nowrap;
-  transition: opacity 0.15s ease;
-
-  svg { width: 14px; height: 14px; }
-
-  &:hover { opacity: 0.85; }
-
-  &--primary {
-    background-color: var(--color-dark);
-    color: var(--color-white);
-  }
-}
-
-.topbar__icon-btn {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: none;
-  border: 1px solid var(--color-border);
-  cursor: pointer;
-  color: var(--color-muted);
-  transition: background-color 0.15s ease, color 0.15s ease;
-
-  svg { width: 16px; height: 16px; }
-
-  &:hover {
-    background-color: var(--color-surface-lt);
-    color: var(--color-dark);
-  }
-}
-
-.topbar__icon-btn-dot {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: #EF4444;
-  border: 1.5px solid var(--color-white);
 }
 
 .topbar__avatar {
@@ -511,64 +529,10 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
   &:hover { opacity: 0.85; }
 }
 
-// =============================================
-// QUOTA UTILISATION
-// =============================================
 
-.sidebar__quota {
-  padding: 8px 12px;
-  margin: 0 8px 8px;
-  border-radius: var(--radius-inner);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-lt);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  .shell--collapsed & { display: none; }
-}
-
-.sidebar__quota-label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: var(--color-muted);
-}
-
-.sidebar__quota-count {
-  font-family: var(--font-medium);
-  color: var(--color-dark);
-}
-
-.sidebar__quota-bar {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--color-border);
-  overflow: hidden;
-}
-
-.sidebar__quota-fill {
-  height: 100%;
-  border-radius: 2px;
-  background: var(--color-dark);
-  transition: width 0.4s ease;
-
-  &--warning { background: #F59E0B; }
-  &--danger  { background: #EF4444; }
-}
-
-.sidebar__quota-upgrade {
-  font-size: 11px;
-  font-family: var(--font-medium);
-  color: #F59E0B;
-  text-decoration: none;
-  &:hover { text-decoration: underline; }
-}
-
-
-// =============================================
+// ══════════════════════════════════════════════════════════════
 // CONTENU
-// =============================================
+// ══════════════════════════════════════════════════════════════
 
 .shell__content {
   flex: 1;
@@ -578,58 +542,54 @@ $transition-ease:         cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 
-// =============================================
+// ══════════════════════════════════════════════════════════════
 // BACKDROP MOBILE
-// =============================================
+// ══════════════════════════════════════════════════════════════
 
 .sidebar-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(20, 21, 26, 0.3);
   z-index: 40;
   backdrop-filter: blur(2px);
-  animation: backdropIn 0.2s ease;
+  animation: backdrop-in 0.2s ease;
 }
 
-@keyframes backdropIn {
+@keyframes backdrop-in {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
 
-// =============================================
+// ══════════════════════════════════════════════════════════════
 // RESPONSIVE
-// =============================================
-
+// ══════════════════════════════════════════════════════════════
 
 @media (max-width: 1023px) {
-  .shell__main {
-    margin-left: 0;
-  }
+  .shell__main { margin-left: 0; }
 
   .sidebar {
-    width: $sidebar-width;
+    width: $sidebar-w;
     transform: translateX(-100%);
     transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
-    box-shadow: none;
 
     &--open {
       transform: translateX(0);
-      box-shadow: 4px 0 24px rgba(0, 0, 0, 0.1);
+      box-shadow: 4px 0 24px rgba(20, 21, 26, 0.1);
     }
   }
 
-  .shell--collapsed .sidebar { width: $sidebar-width; }
-
-  .sidebar__collapse-btn { display: none; }
-  .topbar__expand-btn    { display: none; } // ← masqué sur mobile aussi
-  .topbar__burger        { display: flex; }
-
-  .topbar__action-btn span { display: none; }
+  .shell--collapsed .sidebar { width: $sidebar-w; }
+  .sidebar__collapse-btn     { display: none; }
+  .topbar__expand-btn        { display: none; }
+  .topbar__burger            { display: flex; }
 }
 
 @media (max-width: 767px) {
-  .shell__content          { padding: 20px 16px; }
-  .topbar                  { padding: 0 16px; }
-  .topbar__breadcrumb-root { display: none; }
+  .shell__content { padding: 20px 16px; }
+  .topbar         { padding: 0 16px; }
+
+  .topbar__breadcrumb-root,
+  .topbar__breadcrumb-project,
+  .topbar__breadcrumb-sep:first-of-type { display: none; }
 }
