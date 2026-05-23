@@ -118,8 +118,10 @@
         <div class="sidebar__quota-row">
           <span class="sidebar__quota-text">Feedbacks ce mois</span>
           <span class="sidebar__quota-count">
-            {{ quota()!.usagePercent }}<span class="sidebar__quota-sep">/</span>{{ quota()!.feedbacksLimit === -1 ? '∞' : quota()!.feedbacksLimit }}
-          </span>
+            {{ quota()!.feedbacksThisMonth }}
+            <span class="sidebar__quota-sep">/</span>
+            {{ quota()!.feedbacksLimit === -1 ? '∞' : quota()!.feedbacksLimit }}
+          </span>        
         </div>
 
         <div class="sidebar__quota-track" role="progressbar"

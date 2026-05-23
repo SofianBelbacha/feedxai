@@ -40,9 +40,7 @@ public class CreateFeedbackHandler : IRequestHandler<CreateFeedbackCommand, Crea
         _planLimits = planLimits;
     }
 
-    public async Task<CreateFeedbackResult> Handle(
-        CreateFeedbackCommand request,
-        CancellationToken cancellationToken)
+    public async Task<CreateFeedbackResult> Handle(CreateFeedbackCommand request, CancellationToken cancellationToken)
     {
         // Vérifie que le projet existe, est actif et appartient à l'user
         var project = await _context.Projects

@@ -16,6 +16,7 @@ public class FeedbackAnalysisJob
     private readonly IAiQuotaService _quotaService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<FeedbackAnalysisJob> _logger;
+    private readonly CancellationToken cancellationToken;
 
     public FeedbackAnalysisJob(
         IAppDbContext context,
@@ -96,7 +97,7 @@ public class FeedbackAnalysisJob
             ?? throw new InvalidOperationException(
                 $"Feedback {feedbackId} has no associated user");
 
-        if (!await _quotaService.CanAnalyzeAsync(user.Id, user.Plan))
+        if (!await _quotaService.TryConsumeAsync(user.Id, user.Plan, cancellationToken))
         {
             _logger.LogWarning(
                 "[AI] Daily quota reached for user {UserId} (plan: {Plan})",
@@ -133,7 +134,6 @@ public class FeedbackAnalysisJob
             );
 
             await SaveChangesAsync();
-            await _quotaService.IncrementAsync(user!.Id);
 
             _logger.LogInformation(
                 "[AI] Feedback {FeedbackId} analyzed successfully — " +

@@ -51,7 +51,7 @@ export class DashboardShell implements OnInit {
   readonly quotaPercent = computed(() => {
     const q = this.quota();
     if (!q || q.feedbacksLimit <= 0) return 0;
-    return Math.min(Math.round((q.usagePercent / q.feedbacksLimit) * 100), 100);
+    return Math.min(Math.round(q.usagePercent), 100);
   });
 
   // ─── Label page courante (breadcrumb topbar) ──────────────────────────────

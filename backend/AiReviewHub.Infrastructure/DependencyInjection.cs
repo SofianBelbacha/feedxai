@@ -48,7 +48,6 @@ public static class DependencyInjection
         services.AddScoped<IAiAnalysisService, AiAnalysisService>();
 
         // ─── Quota IA ─────────────────────────────────────────
-        services.AddMemoryCache();
         services.AddScoped<IAiQuotaService, AiQuotaService>();
 
         // ─── Hangfire ─────────────────────────────────────────

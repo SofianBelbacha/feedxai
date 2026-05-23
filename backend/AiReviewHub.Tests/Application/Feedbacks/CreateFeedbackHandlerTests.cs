@@ -24,6 +24,8 @@ namespace AiReviewHub.Tests.Application.Feedbacks
         private readonly CreateFeedbackHandler _handler;
         private readonly Mock<ILogger<CreateFeedbackHandler>> _logger;
         private readonly Mock<IFeedbackAnalysisQueue> _analysisQueue;
+        private readonly Mock<IPlanLimitsService> _planLimits;
+
 
         public CreateFeedbackHandlerTests()
         {
@@ -33,6 +35,7 @@ namespace AiReviewHub.Tests.Application.Feedbacks
             _mapper = new Mock<IMapper>();
             _logger = new Mock<ILogger<CreateFeedbackHandler>>();
             _analysisQueue = new Mock<IFeedbackAnalysisQueue>();
+            _planLimits = new Mock<IPlanLimitsService>();
 
             _handler = new CreateFeedbackHandler(
                 _context,
@@ -40,7 +43,8 @@ namespace AiReviewHub.Tests.Application.Feedbacks
                 _currentUser,
                 _mapper.Object,
                 _logger.Object,
-                _analysisQueue.Object);
+                _analysisQueue.Object,
+                _planLimits.Object);
         }
 
         [Fact]
