@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AiReviewHub.Api.Controllers
 {
@@ -21,6 +22,7 @@ namespace AiReviewHub.Api.Controllers
         }
 
         [HttpPost("feedback")]
+        [EnableRateLimiting("widget_ip")]
         public async Task<IActionResult> Submit(
             [FromBody] SubmitWidgetFeedbackRequest request,
             CancellationToken cancellationToken)
@@ -43,6 +45,7 @@ namespace AiReviewHub.Api.Controllers
         string ProjectToken,
         string? Category = null,
         string? PageUrl = null,
-        string? UserAgent = null
+        string? UserAgent = null,
+        string? Website = null
     );
 }

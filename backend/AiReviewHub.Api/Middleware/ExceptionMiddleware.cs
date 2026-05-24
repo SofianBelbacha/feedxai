@@ -36,6 +36,10 @@ namespace AiReviewHub.Api.Middleware
             {
                 await HandleQuotaExceededException(context, ex);
             }
+            catch (RateLimitException ex)
+            {
+                await HandleException(context, ex, (HttpStatusCode)429);
+            }
             catch (UnauthorizedAccessException ex)
             {
                 await HandleException(context, ex, HttpStatusCode.Unauthorized);

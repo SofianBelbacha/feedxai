@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -62,6 +63,32 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    // Limite par IP sur l'endpoint widget
+    options.AddPolicy("widget_ip", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10, // 10 soumissions
+                Window = TimeSpan.FromHours(1), // par heure par IP
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0 // pas de file d'attente — rejet immédiat
+            }));
+
+    // Réponse sur dépassement — 429 silencieux (ne pas informer le bot)
+    options.OnRejected = async (context, ct) =>
+    {
+        context.HttpContext.Response.StatusCode = 429;
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            type = "RateLimitExceeded",
+            error = "Too many requests. Please try again later."
+        }, ct);
+    };
+});
+
 
 builder.Services.AddAuthorization();
 
@@ -101,6 +128,8 @@ if (app.Environment.IsDevelopment())
         Authorization = [] // pas d'auth en dev
     });
 }
+
+app.UseRateLimiter();
 
 //app.UseHttpsRedirection();
 

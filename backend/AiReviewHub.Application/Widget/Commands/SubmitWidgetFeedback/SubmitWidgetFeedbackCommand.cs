@@ -10,7 +10,8 @@ namespace AiReviewHub.Application.Widget.Commands.SubmitWidgetFeedback
         string ProjectToken,
         string? Category = null,
         string? PageUrl = null,
-        string? UserAgent = null
+        string? UserAgent = null,
+        string? Website = null
     ) : IRequest<SubmitWidgetFeedbackResult>;
 
     public record SubmitWidgetFeedbackResult(Guid Id);

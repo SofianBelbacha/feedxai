@@ -168,6 +168,17 @@ export const styles = `
 
   .field__counter--warn { color: var(--arh-error); }
 
+  .widget-honeypot {
+    opacity: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 0;
+    width: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+
   /* ── Catégories ─────────────────────────────────────────── */
   .categories {
     display: flex;
