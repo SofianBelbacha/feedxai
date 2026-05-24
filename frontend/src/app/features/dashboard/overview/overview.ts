@@ -166,3 +166,4 @@ export class Overview implements OnInit, OnDestroy {
   trackByDate(_: number, item: TrendPoint):    string { return item.date; }
   trackById(_:   number, item: RecentFeedback): string { return item.id;   }
 }
+

@@ -34,9 +34,7 @@ namespace AiReviewHub.Application.Billing.Commands.HandleStripeWebhook
             _logger = logger;
         }
 
-        public async Task<Unit> Handle(
-            HandleStripeWebhookCommand request,
-            CancellationToken cancellationToken)
+        public async Task<Unit> Handle(HandleStripeWebhookCommand request, CancellationToken cancellationToken)
         {
             var webhookSecret = _configuration["Stripe:WebhookSecret"]
                 ?? throw new InvalidOperationException("Stripe:WebhookSecret not configured");
@@ -109,11 +107,24 @@ namespace AiReviewHub.Application.Billing.Commands.HandleStripeWebhook
 
             // Mise à jour du plan selon le metadata ou le price lookup
             var planStr = session.Metadata?.GetValueOrDefault("plan");
-            _logger.LogInformation("[Stripe] Plan from metadata: {Plan}", planStr);
             if (!string.IsNullOrWhiteSpace(planStr) && Enum.TryParse<Domain.Enums.Plan>(planStr, true, out var plan))
             {
                 if (user.Plan != plan)
                     user.UpdatePlan(plan, _dateTimeProvider);
+            }
+
+            if (!string.IsNullOrWhiteSpace(session.SubscriptionId))
+            {
+                var subscriptionService = new SubscriptionService();
+                var subscription = await subscriptionService.GetAsync(session.SubscriptionId, cancellationToken: cancellationToken);
+
+                if (subscription is not null)
+                {
+                    user.UpdateBillingPeriod(subscription.Items.Data[0].CurrentPeriodStart, subscription.Items.Data[0].CurrentPeriodEnd, _dateTimeProvider);
+
+                    _logger.LogInformation("[Stripe] Billing period set for user {UserId}: {Start} → {End}",
+                        user.Id, subscription.Items.Data[0].CurrentPeriodStart, subscription.Items.Data[0].CurrentPeriodEnd);
+                }
             }
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -144,6 +155,14 @@ namespace AiReviewHub.Application.Billing.Commands.HandleStripeWebhook
             {
                 if (user.Plan != Domain.Enums.Plan.Free)
                     user.UpdatePlan(Domain.Enums.Plan.Free, _dateTimeProvider);
+
+                // Reset la période sur le mois calendaire courant pour les Free
+                var now = _dateTimeProvider.UtcNow;
+                user.UpdateBillingPeriod(
+                    new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+                    new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1),
+                    _dateTimeProvider);
+
             }
             else if (subscription.Status == "active" || subscription.Status == "trialing")
             {
@@ -154,6 +173,14 @@ namespace AiReviewHub.Application.Billing.Commands.HandleStripeWebhook
                     if (user.Plan != plan)
                         user.UpdatePlan(plan, _dateTimeProvider);
                 }
+
+                // Stripe envoie cet event à chaque renouvellement avec les nouvelles dates
+                user.UpdateBillingPeriod(subscription.Items.Data[0].CurrentPeriodStart, subscription.Items.Data[0].CurrentPeriodEnd, _dateTimeProvider);
+
+                _logger.LogInformation(
+                    "[Stripe] Billing period renewed for user {UserId}: {Start} → {End}",
+                    user.Id, subscription.Items.Data[0].CurrentPeriodStart, subscription.Items.Data[0].CurrentPeriodEnd);
+
             }
 
             await _context.SaveChangesAsync(cancellationToken);

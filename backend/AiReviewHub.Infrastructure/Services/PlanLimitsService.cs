@@ -1,5 +1,9 @@
 ﻿using AiReviewHub.Application.Abstractions;
+using AiReviewHub.Application.Configuration;
+using AiReviewHub.Domain.Abstractions;
+using AiReviewHub.Domain.Entities;
 using AiReviewHub.Domain.Enums;
+using AiReviewHub.Domain.Exceptions;
 using AiReviewHub.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -12,69 +16,84 @@ namespace AiReviewHub.Infrastructure.Services
 
     public class PlanLimitsService : IPlanLimitsService
     {
-        // ── Limites par plan ───────────────────────────────────
-        // Alignées avec le pricing décidé : Free=50, Pro=2000, Team=10000
-        private static readonly Dictionary<Plan, PlanLimits> Limits = new()
-        {
-            [Plan.Free] = new PlanLimits(
-                MaxProjects: 1,
-                MaxFeedbacksPerMonth: 50),
-
-            [Plan.Pro] = new PlanLimits(
-                MaxProjects: 10,
-                MaxFeedbacksPerMonth: 2_000),
-
-            [Plan.Team] = new PlanLimits(
-                MaxProjects: -1,       // illimité
-                MaxFeedbacksPerMonth: 10_000),
-        };
 
         private readonly AppDbContext _context;
         private readonly ILogger<PlanLimitsService> _logger;
+        private readonly IDateTimeProvider _dateTime;
 
-        public PlanLimitsService(AppDbContext context, ILogger<PlanLimitsService> logger)
+        public PlanLimitsService(AppDbContext context, ILogger<PlanLimitsService> logger, IDateTimeProvider dateTime)
         {
             _context = context;
             _logger = logger;
+            _dateTime = dateTime;
+
         }
 
-        public PlanLimits GetLimits(Plan plan) => Limits[plan];
+        public PlanLimits GetLimits(Plan plan) => PlanLimitsConfiguration.For(plan);
 
-        public async Task<int> GetMonthlyFeedbackCountAsync(
-            Guid userId,
-            CancellationToken cancellationToken = default)
+
+        public async Task<QuotaConsumeResult> TryConsumeFeedbackSlotAsync(Guid userId, CancellationToken cancellationToken = default)
         {
-            var now = DateTime.UtcNow;
-            var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-
-            return await _context.Feedbacks
+            // Récupère le plan et les limites en une seule requête
+            var user = await _context.Users
                 .AsNoTracking()
-                .Where(f =>
-                    f.Project.UserId == userId &&
-                    f.CreatedAt >= monthStart)
-                .CountAsync(cancellationToken);
-        }
+                .Where(x => x.Id == userId)
+                .Select(x => new { x.Plan, x.QuotaResetDate })
+                .FirstOrDefaultAsync(cancellationToken)
+                ?? throw new NotFoundException($"User {userId} introuvable.");
 
-        public async Task<bool> CanSubmitFeedbackAsync(
-            Guid userId,
-            Plan plan,
-            CancellationToken cancellationToken = default)
-        {
-            var limits = GetLimits(plan);
+            var limits = GetLimits(user.Plan);
 
-            // -1 = illimité → toujours autorisé
+            // Illimité — pas besoin de toucher le compteur
             if (limits.MaxFeedbacksPerMonth == -1)
-                return true;
+                return QuotaConsumeResult.Allowed(current: 0, limit: -1);
 
-            var count = await GetMonthlyFeedbackCountAsync(userId, cancellationToken);
-            var canSubmit = count < limits.MaxFeedbacksPerMonth;
+            var now = _dateTime.UtcNow;
 
-            if (!canSubmit)
-                _logger.LogWarning(
-                    "[PlanLimits] User {UserId} ({Plan}) reached monthly feedback limit: {Count}/{Max}",
-                    userId, plan, count, limits.MaxFeedbacksPerMonth);
+            // Atomic upsert : reset si nouvelle période + incrément si sous la limite
+            var rowsAffected = await _context.Database.ExecuteSqlAsync($"""
+                UPDATE users SET
+                    feedbacks_this_month = CASE
+                        WHEN quota_reset_date <= {now} THEN 1
+                        ELSE feedbacks_this_month + 1
+                    END,
+                    quota_reset_date = CASE
+                        WHEN quota_reset_date <= {now}
+                        THEN DATE_TRUNC('month', {now}::timestamp) + INTERVAL '1 month'
+                        ELSE quota_reset_date
+                    END
+                WHERE id = {userId}
+                  AND (
+                    quota_reset_date <= {now}
+                    OR feedbacks_this_month < {limits.MaxFeedbacksPerMonth}
+                  )
+                """, cancellationToken);
 
-            return canSubmit;
+            if (rowsAffected == 0)
+            {
+                // WHERE bloqué → quota atteint
+                var current = await _context.Users
+                    .AsNoTracking()
+                    .Where(x => x.Id == userId)
+                    .Select(x => x.FeedbacksThisMonth)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                return QuotaConsumeResult.Denied(current, limits.MaxFeedbacksPerMonth);
+            }
+
+            return QuotaConsumeResult.Allowed(
+                current: limits.MaxFeedbacksPerMonth, // valeur approx, suffisant pour l'UX
+                limit: limits.MaxFeedbacksPerMonth);
         }
+
+        public async Task<int> GetCurrentFeedbackCountAsync(Guid userId, CancellationToken ct = default)
+        {
+            return await _context.Users
+                .AsNoTracking()
+                .Where(u => u.Id == userId)
+                .Select(u => u.FeedbacksThisMonth)
+                .FirstOrDefaultAsync(ct);
+        }
+
     }
 }

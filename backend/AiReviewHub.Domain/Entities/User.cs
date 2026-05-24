@@ -21,6 +21,10 @@ namespace AiReviewHub.Domain.Entities
         public DateTime CreatedAt { get; private set; }
         public DateTime? UpdatedAt { get; private set; }
         public string? StripeCustomerId { get; private set; }
+        public DateTime BillingPeriodStart { get; private set; }
+        public DateTime BillingPeriodEnd { get; private set; }
+        public int FeedbacksThisMonth { get; private set; }
+        public DateTime QuotaResetDate { get; private set; }
 
         public ICollection<Project> Projects { get; private set; } = [];
 
@@ -51,12 +55,7 @@ namespace AiReviewHub.Domain.Entities
         }
 
         // Factory OAuth Google
-        public static User CreateWithGoogle(
-            string email,
-            string firstName,
-            string lastName,
-            string googleId,
-            DateTime now)
+        public static User CreateWithGoogle(string email, string firstName, string lastName, string googleId, DateTime now)
         {
             if (string.IsNullOrWhiteSpace(firstName))
                 throw new ArgumentException("First name cannot be empty");
@@ -87,10 +86,6 @@ namespace AiReviewHub.Domain.Entities
 
             GoogleId = googleId;
             UpdatedAt = now;
-        }
-
-        public void AddRefreshToken(RefreshToken token)
-        {
         }
 
         public void RevokeOldestActiveSession(DateTime now)
@@ -129,6 +124,16 @@ namespace AiReviewHub.Domain.Entities
             StripeCustomerId = customerId;
             UpdatedAt = dateTimeProvider.UtcNow;
         }
+
+        public void UpdateBillingPeriod(DateTime periodStart, DateTime periodEnd, IDateTimeProvider dateTimeProvider)
+        {
+            BillingPeriodStart = periodStart;
+            BillingPeriodEnd = periodEnd;
+            // Synchroniser le QuotaResetDate avec la période Stripe
+            QuotaResetDate = periodEnd;
+            UpdatedAt = dateTimeProvider.UtcNow;
+        }
+
 
     }
 

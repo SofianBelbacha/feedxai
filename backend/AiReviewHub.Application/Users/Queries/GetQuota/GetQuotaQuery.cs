@@ -34,9 +34,7 @@ namespace AiReviewHub.Application.Users.Queries.GetQuota
             _planLimits = planLimits;
         }
 
-        public async Task<GetQuotaResult> Handle(
-            GetQuotaQuery request,
-            CancellationToken cancellationToken)
+        public async Task<GetQuotaResult> Handle(GetQuotaQuery request, CancellationToken cancellationToken)
         {
             var user = await _context.Users
                 .AsNoTracking()
@@ -45,8 +43,7 @@ namespace AiReviewHub.Application.Users.Queries.GetQuota
 
             var limits = _planLimits.GetLimits(user.Plan);
 
-            var feedbacksThisMonth = await _planLimits
-                .GetMonthlyFeedbackCountAsync(_currentUser.UserId, cancellationToken);
+            var feedbacksThisMonth = await _planLimits.GetCurrentFeedbackCountAsync(_currentUser.UserId, cancellationToken);
 
             var projectCount = await _context.Projects
                 .AsNoTracking()
@@ -67,3 +64,4 @@ namespace AiReviewHub.Application.Users.Queries.GetQuota
         }
     }
 }
+                

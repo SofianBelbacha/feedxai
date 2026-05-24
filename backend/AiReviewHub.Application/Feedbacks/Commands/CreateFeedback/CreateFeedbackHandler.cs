@@ -53,18 +53,12 @@ public class CreateFeedbackHandler : IRequestHandler<CreateFeedbackCommand, Crea
             ?? throw new NotFoundException("Project not found or inactive");
 
         // ── Vérification du quota mensuel ─────────────────────
-        var canSubmit = await _planLimits.CanSubmitFeedbackAsync(
-            _currentUser.UserId,
-            project.User.Plan,
-            cancellationToken);
-
-        if (!canSubmit)
-        {
-            var limits = _planLimits.GetLimits(project.User.Plan);
-            throw new ForbiddenException(
-                $"Monthly feedback limit reached ({limits.MaxFeedbacksPerMonth} feedbacks/month " +
-                $"on the {project.User.Plan} plan). Please upgrade to continue.");
-        }
+        var quotaResult = await _planLimits.TryConsumeFeedbackSlotAsync(_currentUser.UserId, cancellationToken);
+        if (!quotaResult.IsAllowed)
+            throw new QuotaExceededException(
+                current: quotaResult.Current,
+                limit: quotaResult.Limit,
+                resetDate: project.User.QuotaResetDate);
 
 
         // Crée le feedback via le Domain

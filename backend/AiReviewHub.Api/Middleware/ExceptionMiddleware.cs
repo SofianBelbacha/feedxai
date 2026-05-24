@@ -32,6 +32,10 @@ namespace AiReviewHub.Api.Middleware
             {
                 await HandleException(context, ex, HttpStatusCode.Forbidden);
             }
+            catch (QuotaExceededException ex)
+            {
+                await HandleQuotaExceededException(context, ex);
+            }
             catch (UnauthorizedAccessException ex)
             {
                 await HandleException(context, ex, HttpStatusCode.Unauthorized);
@@ -83,6 +87,21 @@ namespace AiReviewHub.Api.Middleware
             {
                 type = "InternalServerError",
                 error = "An unexpected error occurred"
+            });
+        }
+
+        private static async Task HandleQuotaExceededException(HttpContext context, QuotaExceededException ex)
+        {
+            context.Response.StatusCode = 429;
+            context.Response.ContentType = "application/json";
+
+            await context.Response.WriteAsJsonAsync(new
+            {
+                type = nameof(QuotaExceededException),
+                error = ex.Message,
+                current = ex.Current,
+                limit = ex.Limit,
+                resetDate = ex.ResetDate.ToString("yyyy-MM-dd")
             });
         }
     }

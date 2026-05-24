@@ -41,7 +41,6 @@ namespace AiReviewHub.Infrastructure.Persistence.Configurations
                 .HasMaxLength(100)
                 .IsRequired();
 
-            // UserConfiguration.cs
             builder.Property(u => u.GoogleId)
                 .HasMaxLength(100);
 
@@ -59,6 +58,22 @@ namespace AiReviewHub.Infrastructure.Persistence.Configurations
 
             builder.Property(u => u.StripeCustomerId)
                 .HasMaxLength(100);
+
+            builder.Property(x => x.BillingPeriodStart)
+                .IsRequired()
+                .HasDefaultValueSql("NOW()");
+
+            builder.Property(x => x.BillingPeriodEnd)
+                .IsRequired()
+                .HasDefaultValueSql("NOW() + INTERVAL '1 month'");
+
+            builder.Property(x => x.FeedbacksThisMonth)
+                .IsRequired()
+                .HasDefaultValue(0);
+
+            builder.Property(x => x.QuotaResetDate)
+                .IsRequired()
+                .HasDefaultValue(new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
 
             builder.HasIndex(u => u.StripeCustomerId)
                 .IsUnique()

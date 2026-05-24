@@ -1,4 +1,5 @@
 ﻿using AiReviewHub.Application.Abstractions;
+using AiReviewHub.Application.Configuration;
 using AiReviewHub.Domain.Abstractions;
 using AiReviewHub.Domain.Enums;
 using AiReviewHub.Infrastructure.Persistence;
@@ -16,14 +17,6 @@ namespace AiReviewHub.Infrastructure.Services
         private readonly AppDbContext _context;
         private readonly IDateTimeProvider _dateTime;
 
-        // Une seule source de vérité pour les limites journalières
-        private static readonly Dictionary<Plan, int> DailyLimits = new()
-    {
-        { Plan.Free, 50 },
-        { Plan.Pro, 500 },
-        { Plan.Team, 2000 },
-    };
-
         public AiQuotaService(AppDbContext context, IDateTimeProvider dateTime)
         {
             _context = context;
@@ -32,7 +25,7 @@ namespace AiReviewHub.Infrastructure.Services
 
         public async Task<bool> TryConsumeAsync(Guid userId, Plan plan, CancellationToken ct = default)
         {
-            var limit = DailyLimits[plan];
+            var limit = PlanLimitsConfiguration.For(plan).MaxDailyAiAnalyses;
             var today = DateOnly.FromDateTime(_dateTime.UtcNow);
 
             // Upsert + incrément atomique en une seule requête SQL
