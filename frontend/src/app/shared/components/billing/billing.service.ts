@@ -12,6 +12,7 @@ export interface QuotaResult {
   projectCount: number;
   projectsLimit: number;
   usagePercent: number;
+  resetDate: string;
 }
 
 

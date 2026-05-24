@@ -10,6 +10,8 @@ import { UserService } from '../../../core/services/user.service';
 import { DashboardContextService } from '../../../core/services/dashboard-context.service';
 import { BillingService, QuotaResult } from '../../../shared/components/billing/billing.service';
 import { ProjectSwitcher } from '../../../shared/components/project-switcher/project-switcher';
+import { QuotaStateService } from '../../../core/services/quota-state.service';
+import { QuotaModalService } from '../../../core/services/quota-modal.service';
 
 interface NavItem {
   label: string;
@@ -40,19 +42,16 @@ export class DashboardShell implements OnInit {
   readonly initials = this.userService.initials;
   readonly currentProject = this.dashboardContext.selectedProject;
   readonly currentPlan = this.dashboardContext.plan;
+  readonly quotaState = inject(QuotaStateService);
+
 
   sidebarCollapsed = signal(false);
   mobileMenuOpen = signal(false);
   logoutLoading = signal(false);
-  quota = signal<QuotaResult | null>(null);
   currentUrl = signal('');
+  readonly quotaModal = inject(QuotaModalService);
 
   // ─── Quota helpers ────────────────────────────────────────────────────────
-  readonly quotaPercent = computed(() => {
-    const q = this.quota();
-    if (!q || q.feedbacksLimit <= 0) return 0;
-    return Math.min(Math.round(q.usagePercent), 100);
-  });
 
   // ─── Label page courante (breadcrumb topbar) ──────────────────────────────
   readonly currentPageLabel = computed(() => {
@@ -91,12 +90,7 @@ export class DashboardShell implements OnInit {
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
   ngOnInit(): void {
-    // Charger le quota
-    this.billingService.getQuota().subscribe({
-      next: quota => this.quota.set(quota),
-      error: () => { /* silencieux */ }
-    });
-
+    this.quotaState.refresh(); 
     // Suivre l'URL courante pour le breadcrumb
     this.currentUrl.set(this.router.url.split('?')[0]);
     this.router.events.pipe(

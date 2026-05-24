@@ -109,33 +109,39 @@
     <div class="sidebar__spacer"></div>
 
     <!-- ── Quota bar ──────────────────────────────────────────── -->
-    @if (!sidebarCollapsed() && quota()) {
+    @if (!sidebarCollapsed() && quotaState.quota()) {
       <div
         class="sidebar__quota"
-        [class.sidebar__quota--warning]="quotaPercent() >= 80 && quotaPercent() < 95"
-        [class.sidebar__quota--danger]="quotaPercent() >= 95">
+        [class.sidebar__quota--warning]="quotaState.isNearLimit() && !quotaState.isAtLimit()"
+        [class.sidebar__quota--danger]="quotaState.isAtLimit()">
 
         <div class="sidebar__quota-row">
           <span class="sidebar__quota-text">Feedbacks ce mois</span>
           <span class="sidebar__quota-count">
-            {{ quota()!.feedbacksThisMonth }}
+            {{ quotaState.quota()!.feedbacksThisMonth }}
             <span class="sidebar__quota-sep">/</span>
-            {{ quota()!.feedbacksLimit === -1 ? '∞' : quota()!.feedbacksLimit }}
-          </span>        
+            {{ quotaState.quota()!.feedbacksLimit === -1 ? '∞' : quotaState.quota()!.feedbacksLimit }}
+          </span>
         </div>
 
         <div class="sidebar__quota-track" role="progressbar"
-             [attr.aria-valuenow]="quotaPercent()"
-             aria-valuemin="0" aria-valuemax="100">
+            [attr.aria-valuenow]="quotaState.quotaPercent()"
+            aria-valuemin="0" aria-valuemax="100">
           <div
             class="sidebar__quota-fill"
-            [style.width.%]="quota()!.feedbacksLimit === -1 ? 0 : quotaPercent()">
+            [style.width.%]="quotaState.quota()!.feedbacksLimit === -1 ? 0 : quotaState.quotaPercent()">
           </div>
         </div>
 
-        @if (quotaPercent() >= 80 && quota()!.feedbacksLimit !== -1) {
+        @if (quotaState.resetDateFormatted()) {
+          <span class="sidebar__quota-reset">
+            Renouvellement le {{ quotaState.resetDateFormatted() }}
+          </span>
+        }
+
+        @if (quotaState.isNearLimit() && quotaState.quota()!.feedbacksLimit !== -1) {
           <a routerLink="/dashboard/billing" class="sidebar__quota-cta">
-            @if (quotaPercent() >= 95) {
+            @if (quotaState.isAtLimit()) {
               ⚠️ Limite atteinte — Upgrader →
             } @else {
               Passer au Pro →
@@ -305,5 +311,11 @@
     </main>
 
   </div>
-
+  
+  @if (quotaModal.modalData()) {
+    <app-quota-exceeded-modal
+      [data]="quotaModal.modalData()!"
+      (onDismiss)="quotaModal.dismiss()">
+    </app-quota-exceeded-modal>
+  }
 </div>

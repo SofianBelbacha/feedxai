@@ -15,7 +15,8 @@ namespace AiReviewHub.Application.Users.Queries.GetQuota
         int FeedbacksLimit, // -1 = illimité
         int ProjectCount,
         int ProjectsLimit, // -1 = illimité
-        double UsagePercent // 0-100, pour la barre de progression
+        double UsagePercent, // 0-100, pour la barre de progression
+        DateTime ResetDate
     );
 
     public class GetQuotaHandler : IRequestHandler<GetQuotaQuery, GetQuotaResult>
@@ -59,7 +60,8 @@ namespace AiReviewHub.Application.Users.Queries.GetQuota
                 FeedbacksLimit: limits.MaxFeedbacksPerMonth,
                 ProjectCount: projectCount,
                 ProjectsLimit: limits.MaxProjects,
-                UsagePercent: usagePercent
+                UsagePercent: usagePercent,
+                ResetDate: user.BillingPeriodEnd
             );
         }
     }
