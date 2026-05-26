@@ -28,21 +28,18 @@ namespace AiReviewHub.Infrastructure.Services
             var limit = PlanLimitsConfiguration.For(plan).MaxDailyAiAnalyses;
             var today = DateOnly.FromDateTime(_dateTime.UtcNow);
 
-            // Upsert + incrément atomique en une seule requête SQL
-            // Retourne le nouveau compteur, ou null si la limite est déjà atteinte
-            var newCount = await _context.Database.ExecuteSqlAsync($"""
+            // Upsert atomique — retourne le nombre de lignes affectées
+            // 1 = INSERT ou UPDATE réussi → quota disponible
+            // 0 = WHERE count < limit a bloqué → quota atteint
+            var rowsAffected = await _context.Database.ExecuteSqlAsync($"""
                 INSERT INTO ai_usage_counters (user_id, date, count)
                 VALUES ({userId}, {today}, 1)
                 ON CONFLICT (user_id, date)
                 DO UPDATE SET count = ai_usage_counters.count + 1
                 WHERE ai_usage_counters.count < {limit}
-                RETURNING count
                 """, ct);
 
-            // ExecuteSqlAsync retourne le nombre de lignes affectées
-            // 1 ligne = INSERT ou UPDATE réussi → autorisé
-            // 0 ligne = WHERE count < limit a bloqué → quota atteint
-            return newCount > 0;
+            return rowsAffected > 0;
         }
 
         public async Task<int> GetCurrentUsageAsync(Guid userId, CancellationToken ct = default)

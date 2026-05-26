@@ -78,3 +78,6 @@ namespace AiReviewHub.Api.Controllers
         public record CreateBillingPortalRequest(string ReturnUrl);
     }
 }
+
+
+

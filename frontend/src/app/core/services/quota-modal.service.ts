@@ -6,6 +6,7 @@ export class QuotaModalService {
   readonly modalData = signal<QuotaExceededData | null>(null);
 
   show(data: QuotaExceededData): void {
+    if (this.modalData()) return; // évite les appels multiples simultanés
     this.modalData.set(data);
   }
 

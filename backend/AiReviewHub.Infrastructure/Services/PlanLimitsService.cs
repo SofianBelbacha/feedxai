@@ -38,7 +38,7 @@ namespace AiReviewHub.Infrastructure.Services
             var user = await _context.Users
                 .AsNoTracking()
                 .Where(x => x.Id == userId)
-                .Select(x => new { x.Plan, x.QuotaResetDate })
+                .Select(x => new { x.Plan, x.QuotaResetDate, x.BillingPeriodEnd })
                 .FirstOrDefaultAsync(cancellationToken)
                 ?? throw new NotFoundException($"User {userId} introuvable.");
 
@@ -50,6 +50,12 @@ namespace AiReviewHub.Infrastructure.Services
 
             var now = _dateTime.UtcNow;
 
+            // La nouvelle date de reset vient exclusivement de BillingPeriodEnd
+            // Elle est mise à jour par le webhook Stripe customer.subscription.updated
+            // On ne recalcule JAMAIS le mois calendaire ici
+            var newResetDate = user.BillingPeriodEnd;
+
+
             // Atomic upsert : reset si nouvelle période + incrément si sous la limite
             var rowsAffected = await _context.Database.ExecuteSqlAsync($"""
                 UPDATE users SET
@@ -59,7 +65,7 @@ namespace AiReviewHub.Infrastructure.Services
                     END,
                     quota_reset_date = CASE
                         WHEN quota_reset_date <= {now}
-                        THEN DATE_TRUNC('month', {now}::timestamp) + INTERVAL '1 month'
+                        THEN {newResetDate}
                         ELSE quota_reset_date
                     END
                 WHERE id = {userId}
