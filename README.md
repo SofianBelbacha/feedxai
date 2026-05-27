@@ -157,13 +157,6 @@ feature/project-dashboard
 fix/utc-datetime
 refactor/openai-service
 ```
-
----
-
-# Licence
-
-Propriétaire — Tous droits réservés.
-
 ---
 
 # Auteur
