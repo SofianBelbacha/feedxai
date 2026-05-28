@@ -1,5 +1,6 @@
 ﻿using AiReviewHub.Application.Abstractions;
 using AiReviewHub.Domain.Abstractions;
+using AiReviewHub.Domain.Entities;
 using AiReviewHub.Domain.Enums;
 using AiReviewHub.Domain.ValueObjects;
 using MediatR;
@@ -7,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Stripe;
+using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -53,25 +55,75 @@ namespace AiReviewHub.Application.Billing.Commands.HandleStripeWebhook
                 throw new UnauthorizedAccessException("Invalid Stripe webhook signature.");
             }
 
-            _logger.LogInformation("[Stripe Webhook] Received event: {EventType}", stripeEvent.Type);
+            _logger.LogInformation("[Stripe Webhook] Received event: {EventType} {EventId}", stripeEvent.Type, stripeEvent.Id);
 
-            switch (stripeEvent.Type)
+
+            // ── Traitement dans une transaction ──────────────────────
+            // L'enregistrement de l'event et les mutations métier
+            // sont dans la même transaction : atomique ou rien
+            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+
+            try
             {
-                case "checkout.session.completed":
-                    await HandleCheckoutSessionCompletedAsync(stripeEvent, cancellationToken);
-                    break;
+                // ── 1. INSERT en premier — verrou logique distribué ──
+                // Si l'event a déjà été traité, PostgreSQL lève une UniqueViolation
+                // avant tout traitement métier → zéro TOCTOU, zéro side effect double
+                _context.ProcessedStripeEvents.Add(
+                    ProcessedStripeEvent.Create(
+                        stripeEvent.Id,
+                        stripeEvent.Type,
+                        _dateTimeProvider.UtcNow));
 
-                case "customer.subscription.updated":
-                case "customer.subscription.deleted":
-                    await HandleSubscriptionChangedAsync(stripeEvent, cancellationToken);
-                    break;
+                await _context.SaveChangesAsync(cancellationToken);
 
-                default:
-                    _logger.LogInformation("[Stripe Webhook] Unhandled event type: {EventType}", stripeEvent.Type);
-                    break;
+                // ── 2. Traitement métier ──────────────────────────────
+                // Les sous-handlers modifient les entités SANS SaveChanges
+                switch (stripeEvent.Type)
+                {
+                    case "checkout.session.completed":
+                        await HandleCheckoutSessionCompletedAsync(stripeEvent, cancellationToken);
+                        break;
+
+                    case "customer.subscription.updated":
+                    case "customer.subscription.deleted":
+                        await HandleSubscriptionChangedAsync(stripeEvent, cancellationToken);
+                        break;
+
+                    default:
+                        _logger.LogInformation(
+                            "[Stripe Webhook] Unhandled event type: {EventType}",
+                            stripeEvent.Type);
+                        break;
+                }
+
+                // ── 3. Flush unique + commit ──────────────────────────
+                await _context.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+
+                _logger.LogInformation(
+                    "[Stripe Webhook] Event {EventId} processed and committed",
+                    stripeEvent.Id);
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg && pg.SqlState == PostgresErrorCodes.UniqueViolation)
+            {
+                // Event déjà traité — réponse 200 silencieuse
+                // Stripe ne retentera pas
+                await transaction.RollbackAsync(cancellationToken);
+                _logger.LogInformation(
+                    "[Stripe Webhook] Event {EventId} already processed — skipping",
+                    stripeEvent.Id);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                _logger.LogError(ex,
+                    "[Stripe Webhook] Failed to process event {EventId} ({EventType}) — rolled back",
+                    stripeEvent.Id, stripeEvent.Type);
+                throw; // Stripe recevra un 500 et retentera
             }
 
             return Unit.Value;
+
         }
 
         // ── checkout.session.completed ────────────────────────
@@ -126,9 +178,6 @@ namespace AiReviewHub.Application.Billing.Commands.HandleStripeWebhook
                         user.Id, subscription.Items.Data[0].CurrentPeriodStart, subscription.Items.Data[0].CurrentPeriodEnd);
                 }
             }
-
-            await _context.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("[Stripe] User {UserId} upgraded to plan {Plan}", user.Id, user.Plan);
         }
 
         // ── customer.subscription.updated / deleted ───────────
@@ -182,9 +231,6 @@ namespace AiReviewHub.Application.Billing.Commands.HandleStripeWebhook
                     user.Id, subscription.Items.Data[0].CurrentPeriodStart, subscription.Items.Data[0].CurrentPeriodEnd);
 
             }
-
-            await _context.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("[Stripe] Subscription changed for user {UserId} → Plan: {Plan}", user.Id, user.Plan);
         }
     }
 }
