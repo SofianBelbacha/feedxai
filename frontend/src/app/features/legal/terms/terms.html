@@ -1,0 +1,64 @@
+<div class="terms">
+    <div class="container">
+
+        <!-- En-tête -->
+        <header class="terms__header">
+            <div class="terms__header-meta">
+                <span class="terms__tag">Légal</span>
+                <span class="terms__date">Dernière mise à jour : {{ lastUpdated }}</span>
+            </div>
+            <h1 class="terms__title">Conditions d'utilisation</h1>
+            <p class="terms__lead">
+                Merci d'utiliser AI Review Hub. Ces conditions définissent les règles
+                d'utilisation de notre plateforme. Prenez le temps de les lire attentivement.
+            </p>
+        </header>
+
+        <div class="terms__body">
+
+            <!-- Sommaire — colonne gauche -->
+            <aside class="terms__toc" aria-label="Table des matières">
+                <p class="terms__toc-label">Sur cette page</p>
+                <nav>
+                    <ul class="terms__toc-list">
+                        @for (section of sections; track section.id) {
+                        <li>
+                            <button class="terms__toc-link"
+                                [class.terms__toc-link--active]="activeSection === section.id"
+                                (click)="scrollTo(section.id)">
+                                {{ section.title }}
+                            </button>
+                        </li>
+                        }
+                    </ul>
+                </nav>
+            </aside>
+
+            <!-- Contenu — colonne droite -->
+            <main class="terms__content">
+                @for (section of sections; track section.id) {
+                <section class="terms__section" [id]="section.id">
+                    <h2 class="terms__section-title">{{ section.title }}</h2>
+                    @for (paragraph of section.content; track paragraph) {
+                    <p class="terms__paragraph">{{ paragraph }}</p>
+                    }
+                </section>
+                }
+
+                <!-- Pied de page légal -->
+                <div class="terms__footer-note">
+                    <p>
+                        En utilisant AI Review Hub, vous confirmez avoir lu et accepté
+                        l'intégralité de ces conditions d'utilisation.
+                    </p>
+                    <div class="terms__footer-links">
+                        <a routerLink="/privacy" class="terms__link">Politique de confidentialité</a>
+                        <span aria-hidden="true">·</span>
+                        <a routerLink="/contact" class="terms__link">Nous contacter</a>
+                    </div>
+                </div>
+            </main>
+
+        </div>
+    </div>
+</div>
