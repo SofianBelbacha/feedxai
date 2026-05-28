@@ -1,1 +1,115 @@
-<p>privacy works!</p>
+<div class="privacy">
+  <div class="container">
+
+    <!-- En-tête -->
+    <header class="privacy__header">
+      <div class="privacy__header-meta">
+        <span class="privacy__tag">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 1.5L2 4v4c0 3.3 2.5 5.8 6 6.5 3.5-.7 6-3.2 6-6.5V4L8 1.5z"/>
+          </svg>
+          Confidentialité
+        </span>
+        <span class="privacy__date">Dernière mise à jour : {{ lastUpdated }}</span>
+      </div>
+      <h1 class="privacy__title">Politique de confidentialité</h1>
+      <p class="privacy__lead">
+        Nous prenons la protection de vos données au sérieux.
+        Cette page explique clairement ce que nous collectons, pourquoi,
+        et quels droits vous avez.
+      </p>
+
+      <!-- Indicateurs RGPD -->
+      <div class="privacy__badges">
+        <div class="privacy__badge">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="2.5 8 6 11.5 13.5 4"/>
+          </svg>
+          Conforme RGPD
+        </div>
+        <div class="privacy__badge">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="2.5 8 6 11.5 13.5 4"/>
+          </svg>
+          Pas de pub ciblée
+        </div>
+        <div class="privacy__badge">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="2.5 8 6 11.5 13.5 4"/>
+          </svg>
+          Données non revendues
+        </div>
+      </div>
+    </header>
+
+    <div class="privacy__body">
+
+      <!-- Sommaire sticky -->
+      <aside class="privacy__toc" aria-label="Table des matières">
+        <p class="privacy__toc-label">Sur cette page</p>
+        <nav>
+          <ul class="privacy__toc-list">
+            @for (section of sections; track section.id) {
+              <li>
+                <button
+                  class="privacy__toc-link"
+                  [class.privacy__toc-link--active]="activeSection === section.id"
+                  (click)="scrollTo(section.id)">
+                  {{ section.title }}
+                </button>
+              </li>
+            }
+          </ul>
+        </nav>
+      </aside>
+
+      <!-- Contenu principal -->
+      <main class="privacy__content">
+        @for (section of sections; track section.id) {
+          <section class="privacy__section" [id]="section.id">
+            <h2 class="privacy__section-title">{{ section.title }}</h2>
+
+            @for (block of section.content; track $index) {
+              @if (isString(block)) {
+                <p class="privacy__paragraph">{{ block }}</p>
+              }
+              @if (isList(block)) {
+                <ul class="privacy__list">
+                  @for (item of block.items; track item) {
+                    <li class="privacy__list-item">
+                      <span class="privacy__list-dot" aria-hidden="true"></span>
+                      {{ item }}
+                    </li>
+                  }
+                </ul>
+              }
+            }
+          </section>
+        }
+
+        <!-- Pied de page -->
+        <div class="privacy__footer-note">
+          <div class="privacy__footer-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L3 7v5c0 5 3.8 9.1 9 10 5.2-.9 9-5 9-10V7L12 2z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="privacy__footer-text">
+              Vos données vous appartiennent. Nous les traitons avec respect
+              et transparence, conformément au RGPD.
+            </p>
+            <div class="privacy__footer-links">
+              <a routerLink="/terms"   class="privacy__link">Conditions d'utilisation</a>
+              <span aria-hidden="true">·</span>
+              <a routerLink="/contact" class="privacy__link">Nous contacter</a>
+              <span aria-hidden="true">·</span>
+              <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer" class="privacy__link">CNIL</a>
+            </div>
+          </div>
+        </div>
+      </main>
+
+    </div>
+  </div>
+</div>
