@@ -1,0 +1,81 @@
+<div class="legal">
+    <div class="container">
+
+        <!-- En-tête -->
+        <header class="legal__header">
+            <div class="legal__header-meta">
+                <span class="legal__tag">Légal</span>
+                <span class="legal__date">Dernière mise à jour : {{ lastUpdated }}</span>
+            </div>
+            <h1 class="legal__title">Mentions légales</h1>
+            <p class="legal__lead">
+                Conformément à la loi n° 2004-575 du 21 juin 2004 pour la confiance
+                dans l'économie numérique, voici les informations légales relatives
+                à l'édition et à l'hébergement du site AI Review Hub.
+            </p>
+        </header>
+
+        <div class="legal__body">
+
+            <!-- Sommaire sticky -->
+            <aside class="legal__toc" aria-label="Table des matières">
+                <p class="legal__toc-label">Sur cette page</p>
+                <nav>
+                    <ul class="legal__toc-list">
+                        @for (block of blocks; track block.id) {
+                        <li>
+                            <button class="legal__toc-link" [class.legal__toc-link--active]="activeSection === block.id"
+                                (click)="scrollTo(block.id)">
+                                {{ block.title }}
+                            </button>
+                        </li>
+                        }
+                    </ul>
+                </nav>
+            </aside>
+
+            <!-- Contenu -->
+            <main class="legal__content">
+
+                @for (block of blocks; track block.id) {
+                <section class="legal__section" [id]="block.id">
+                    <h2 class="legal__section-title">{{ block.title }}</h2>
+                    <dl class="legal__table">
+                        @for (row of block.rows; track row.label) {
+                        <div class="legal__row">
+                            <dt class="legal__label">{{ row.label }}</dt>
+                            <dd class="legal__value">
+                                @if (row.link) {
+                                @if (isInternalLink(row.link)) {
+                                <a [routerLink]="row.link" class="legal__link">{{ row.value }}</a>
+                                } @else {
+                                <a [href]="row.link" target="_blank" rel="noopener noreferrer" class="legal__link">{{
+                                    row.value }}</a>
+                                }
+                                } @else {
+                                {{ row.value }}
+                                }
+                            </dd>
+                        </div>
+                        }
+                    </dl>
+                </section>
+                }
+
+                <!-- Pied de page -->
+                <div class="legal__footer-note">
+                    <p>
+                        Pour toute question relative à ces mentions légales, contactez-nous à
+                        <a href="mailto:contact@ai-review-hub.app" class="legal__link">contact@ai-review-hub.app</a>
+                    </p>
+                    <div class="legal__footer-links">
+                        <a routerLink="/privacy" class="legal__link">Politique de confidentialité</a>
+                        <span aria-hidden="true">·</span>
+                        <a routerLink="/terms" class="legal__link">Conditions d'utilisation</a>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+</div>
