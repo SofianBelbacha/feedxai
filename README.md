@@ -2,7 +2,7 @@
 
 FeedXAi est une plateforme SaaS moderne de collecte, centralisation et analyse intelligente de feedback client.
 
-## 🚀 Objectif
+## Objectif
 
 Permettre aux entreprises de :
 
@@ -18,7 +18,7 @@ Permettre aux entreprises de :
 
 ---
 
-# 🏗️ Architecture
+# Architecture
 
 Le projet suit une **Clean Architecture** avec séparation stricte des responsabilités.
 
@@ -34,7 +34,7 @@ AiReviewHub/
 
 ---
 
-# 🧩 Stack Technique
+# Stack Technique
 
 ## Backend
 
@@ -63,7 +63,7 @@ AiReviewHub/
 
 ---
 
-# ⚙️ Fonctionnalités principales
+# Fonctionnalités principales
 
 ## Authentification
 
@@ -104,7 +104,7 @@ AiReviewHub/
 
 ---
 
-# 🔐 Sécurité
+# Sécurité
 
 * Tokens publics isolés par projet
 * JWT HttpOnly
@@ -115,7 +115,7 @@ AiReviewHub/
 
 ---
 
-# 📈 Roadmap
+# Roadmap
 
 ## MVP
 
@@ -140,7 +140,7 @@ AiReviewHub/
 
 ---
 
-# 🛠️ Contribution
+# Contribution
 
 ## Standards :
 
@@ -157,21 +157,14 @@ feature/project-dashboard
 fix/utc-datetime
 refactor/openai-service
 ```
-
 ---
 
-# 📄 Licence
-
-Propriétaire — Tous droits réservés.
-
----
-
-# 👤 Auteur
+# Auteur
 
 Développé par Sofian Belbacha.
 
 ---
 
-# 💡 Vision
+# Vision
 
 FeedXAi vise à devenir une solution complète de Voice of Customer assistée par IA, simple à intégrer, performante et scalable.
