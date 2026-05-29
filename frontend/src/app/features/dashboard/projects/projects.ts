@@ -14,27 +14,42 @@ import { DashboardContextService } from '../../../core/services/dashboard-contex
   styleUrl: './projects.scss',
 })
 export class Projects implements OnInit {
-  private readonly service          = inject(ProjectsService);
-  private readonly router           = inject(Router);
+  private readonly service = inject(ProjectsService);
+  private readonly router = inject(Router);
   private readonly dashboardContext = inject(DashboardContextService);
 
   // ─── State ────────────────────────────────────────────────────────────────
-  loading          = signal(true);
-  error            = signal('');
-  projects         = signal<Project[]>([]);
-  showModal        = signal(false);
-  creating         = signal(false);
-  createError      = signal('');
-  copiedToken      = signal<string | null>(null);
+  loading = signal(true);
+  error = signal('');
+  projects = signal<Project[]>([]);
+  showModal = signal(false);
+  creating = signal(false);
+  createError = signal('');
+  copiedToken = signal<string | null>(null);
   showSnippetModal = signal(false);
-  snippetToCopy    = signal('');
+  snippetToCopy = signal('');
 
-  newName        = signal('');
+  newName = signal('');
   newDescription = signal('');
+
+  // ─── State édition ────────────────────────────────────────────────────────
+  showEditModal = signal(false);
+  editingProject = signal<Project | null>(null);
+  editName = signal('');
+  editDescription = signal('');
+  editError = signal('');
+  saving = signal(false);
+
+  // ─── State suppression ────────────────────────────────────────────────────
+  showDeleteModal = signal(false);
+  deletingProject = signal<Project | null>(null);
+  deleting = signal(false);
+  deleteError = signal('');
+
 
   // ─── Plan & limites — source unique : DashboardContextService ─────────────
   // UserService n'est plus injecté ici : évite deux sources de vérité pour plan/limit.
-  readonly plan         = this.dashboardContext.plan;
+  readonly plan = this.dashboardContext.plan;
   readonly projectLimit = this.dashboardContext.projectLimit;
 
   readonly canCreateMore = computed(() =>
@@ -74,7 +89,7 @@ export class Projects implements OnInit {
     this.showModal.set(true);
   }
 
-  closeModal():        void { this.showModal.set(false); }
+  closeModal(): void { this.showModal.set(false); }
   closeSnippetModal(): void { this.showSnippetModal.set(false); this.snippetToCopy.set(''); }
 
   onCreate(): void {
@@ -157,4 +172,90 @@ export class Projects implements OnInit {
   }
 
   trackById(_: number, item: Project): string { return item.id; }
+
+
+  // ─── Édition ──────────────────────────────────────────────────────────────
+  openEditModal(project: Project): void {
+    this.editingProject.set(project);
+    this.editName.set(project.name);
+    this.editDescription.set(project.description);
+    this.editError.set('');
+    this.showEditModal.set(true);
+  }
+
+  closeEditModal(): void {
+    this.showEditModal.set(false);
+    this.editingProject.set(null);
+  }
+
+  onSaveEdit(): void {
+    const project = this.editingProject();
+    if (!project) return;
+
+    const name = this.editName().trim();
+    if (!name) { this.editError.set('Le nom est requis.'); return; }
+    if (name.length > 100) { this.editError.set('Le nom ne peut pas dépasser 100 caractères.'); return; }
+    if (this.editDescription().length > 500) { this.editError.set('La description ne peut pas dépasser 500 caractères.'); return; }
+
+    this.saving.set(true);
+    this.editError.set('');
+
+    this.service.update(project.id, {
+      name,
+      description: this.editDescription().trim()
+    }).subscribe({
+      next: (updated) => {
+        // Mise à jour optimiste dans la liste locale
+        this.projects.update(list =>
+          list.map(p => p.id === updated.id
+            ? { ...p, name: updated.name, description: updated.description }
+            : p
+          )
+        );
+        this.saving.set(false);
+        this.closeEditModal();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.editError.set(
+          err.error?.errors?.Name?.[0]
+          ?? err.error?.error
+          ?? 'Erreur lors de la sauvegarde. Réessayez.'
+        );
+      }
+    });
+  }
+
+  // ─── Suppression ──────────────────────────────────────────────────────────
+  openDeleteModal(project: Project): void {
+    this.deletingProject.set(project);
+    this.deleteError.set('');
+    this.showDeleteModal.set(true);
+  }
+
+  closeDeleteModal(): void {
+    this.showDeleteModal.set(false);
+    this.deletingProject.set(null);
+  }
+
+  onConfirmDelete(): void {
+    const project = this.deletingProject();
+    if (!project) return;
+
+    this.deleting.set(true);
+    this.deleteError.set('');
+
+    this.service.delete(project.id).subscribe({
+      next: () => {
+        // Retrait optimiste de la liste
+        this.projects.update(list => list.filter(p => p.id !== project.id));
+        this.deleting.set(false);
+        this.closeDeleteModal();
+      },
+      error: () => {
+        this.deleting.set(false);
+        this.deleteError.set('Erreur lors de la suppression. Réessayez.');
+      }
+    });
+  }
 }

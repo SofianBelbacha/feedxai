@@ -12,6 +12,7 @@ import { BillingService, QuotaResult } from '../../../shared/components/billing/
 import { ProjectSwitcher } from '../../../shared/components/project-switcher/project-switcher';
 import { QuotaStateService } from '../../../core/services/quota-state.service';
 import { QuotaModalService } from '../../../core/services/quota-modal.service';
+import { QuotaExceededModal } from '../../../shared/components/quota-exceeded-modal/quota-exceeded-modal';
 
 interface NavItem {
   label: string;
@@ -23,7 +24,7 @@ interface NavItem {
 @Component({
   selector: 'app-dashboard-shell',
   standalone: true,
-  imports: [CommonModule, TitleCasePipe, RouterLink, RouterLinkActive, RouterOutlet, ProjectSwitcher],
+  imports: [CommonModule, TitleCasePipe, RouterLink, RouterLinkActive, RouterOutlet, ProjectSwitcher, QuotaExceededModal],
   templateUrl: './dashboard-shell.html',
   styleUrl: './dashboard-shell.scss',
 })

@@ -21,17 +21,13 @@ export const routes: Routes = [
         loadComponent: () => import('./features/auth/register/register').then(m => m.Register)
     },
     {
-        path: 'terms',
-        loadComponent: () => import('./features/legal/terms/terms').then(m => m.Terms)
-    },
-    {
-        path: 'privacy',
-        loadComponent: () => import('./features/legal/privacy/privacy').then(m => m.Privacy)
-    },
-    {
         path: 'legal',
-        loadComponent: () => import('./features/legal/legal-notice/legal-notice').then(m => m.LegalNotice)
-    },  
+        children: [
+            { path: 'terms', loadComponent: () => import('./features/legal/terms/terms').then(m => m.Terms) },
+            { path: 'privacy', loadComponent: () => import('./features/legal/privacy/privacy').then(m => m.Privacy) },
+            { path: 'legal-notice', loadComponent: () => import('./features/legal/legal-notice/legal-notice').then(m => m.LegalNotice) }
+        ]
+    },
     {
         path: 'dashboard',
         canActivate: [authGuard],

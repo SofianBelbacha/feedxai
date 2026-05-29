@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { Project, CreateProjectRequest } from './projects.types';
+import { Project, CreateProjectRequest, UpdateProjectResult, UpdateProjectRequest } from './projects.types';
 
 export interface PagedResult<T> {
   data: T[];
@@ -36,6 +36,14 @@ export class ProjectsService {
     );
   }
 
+  update(id: string, request: UpdateProjectRequest): Observable<UpdateProjectResult> {
+    return this.http.put<UpdateProjectResult>(
+      `${this.API}/projects/${id}`,
+      request,
+      { withCredentials: true }
+    );
+  }
+  
   regenerateToken(id: string): Observable<{ publicToken: string }> {
     return this.http.post<{ publicToken: string }>(
       `${this.API}/projects/${id}/regenerate-token`,

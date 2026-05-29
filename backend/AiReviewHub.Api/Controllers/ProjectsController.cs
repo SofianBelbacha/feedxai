@@ -2,6 +2,7 @@
 using AiReviewHub.Application.Projects.Commands.DeactivateProject;
 using AiReviewHub.Application.Projects.Commands.RegenerateProjectToken;
 using AiReviewHub.Application.Projects.Commands.SaveWidgetConfig;
+using AiReviewHub.Application.Projects.Commands.UpdateProject;
 using AiReviewHub.Application.Projects.Queries.GetProjectsByUser;
 using AiReviewHub.Application.Projects.Queries.GetWidgetConfig;
 using MediatR;
@@ -41,14 +42,23 @@ namespace AiReviewHub.Api.Controllers
         }
 
         [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> Delete(
-            Guid id,
-            CancellationToken cancellationToken)
+        public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         {
             await _mediator.Send(
                 new DeactivateProjectCommand(id), cancellationToken);
             return NoContent();
         }
+
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProjectRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(
+                new UpdateProjectCommand(id, request.Name, request.Description),
+                cancellationToken);
+
+            return Ok(result);
+        }
+
 
         [HttpPost("{id:guid}/regenerate-token")]
         public async Task<IActionResult> RegenerateToken(
@@ -89,8 +99,7 @@ namespace AiReviewHub.Api.Controllers
         }
     }
     public record CreateProjectRequest(string Name, string Description);
-
     public record SaveWidgetConfigRequest(string Mode, string Position, string PrimaryColor, string Title, string Placeholder, string ButtonLabel);
-
+    public record UpdateProjectRequest(string Name, string Description);
 
 }

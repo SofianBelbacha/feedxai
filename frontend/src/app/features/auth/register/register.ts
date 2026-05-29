@@ -6,11 +6,13 @@ import { AuthService } from '../../../core/services/auth.service';
 import { environment } from '../../../../environments/environment';
 import { GoogleAuthService } from '../../../core/services/google-auth.service';
 import { parseApiError } from '../../../core/utils/api-error.utils';
+import { Terms } from '../../legal/terms/terms';
+import { Privacy } from '../../legal/privacy/privacy';
 
 
 @Component({
   selector: 'app-register',
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule, Terms, Privacy],
   templateUrl: './register.html',
   styleUrl: './register.scss',
 })

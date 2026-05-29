@@ -51,7 +51,7 @@ export interface QuotaExceededData {
       </div>
     </div>
   `,
-  styleUrl: './quota-exceeded-modal.scss'
+  styles: ''
 })
 export class QuotaExceededModal {
   private readonly router = inject(Router);
