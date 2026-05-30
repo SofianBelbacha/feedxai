@@ -1,8 +1,10 @@
 ﻿using AiReviewHub.Application.Projects.Commands.CreateProject;
-using AiReviewHub.Application.Projects.Commands.DeactivateProject;
+using AiReviewHub.Application.Projects.Commands.DeleteProject;
 using AiReviewHub.Application.Projects.Commands.RegenerateProjectToken;
+using AiReviewHub.Application.Projects.Commands.RestoreProject;
 using AiReviewHub.Application.Projects.Commands.SaveWidgetConfig;
 using AiReviewHub.Application.Projects.Commands.UpdateProject;
+using AiReviewHub.Application.Projects.Queries.GetDeletedProjects;
 using AiReviewHub.Application.Projects.Queries.GetProjectsByUser;
 using AiReviewHub.Application.Projects.Queries.GetWidgetConfig;
 using MediatR;
@@ -44,10 +46,24 @@ namespace AiReviewHub.Api.Controllers
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         {
-            await _mediator.Send(
-                new DeactivateProjectCommand(id), cancellationToken);
+            await _mediator.Send(new DeleteProjectCommand(id), cancellationToken);
             return NoContent();
         }
+
+        [HttpGet("deleted")]
+        public async Task<IActionResult> GetDeleted(CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetDeletedProjectsQuery(), cancellationToken);
+            return Ok(result);
+        }
+
+        [HttpPost("{id:guid}/restore")]
+        public async Task<IActionResult> Restore(Guid id, CancellationToken cancellationToken)
+        {
+            await _mediator.Send(new RestoreProjectCommand(id), cancellationToken);
+            return NoContent();
+        }
+
 
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProjectRequest request, CancellationToken cancellationToken)

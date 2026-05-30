@@ -7,15 +7,15 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace AiReviewHub.Application.Projects.Commands.DeactivateProject
+namespace AiReviewHub.Application.Projects.Commands.RestoreProject
 {
-    public class DeactivateProjectHandler : IRequestHandler<DeactivateProjectCommand, Unit>
+    public class RestoreProjectHandler : IRequestHandler<RestoreProjectCommand, Unit>
     {
         private readonly IAppDbContext _context;
         private readonly ICurrentUserService _currentUser;
         private readonly IDateTimeProvider _dateTimeProvider;
 
-        public DeactivateProjectHandler(
+        public RestoreProjectHandler(
             IAppDbContext context,
             ICurrentUserService currentUser,
             IDateTimeProvider dateTimeProvider)
@@ -26,17 +26,20 @@ namespace AiReviewHub.Application.Projects.Commands.DeactivateProject
         }
 
         public async Task<Unit> Handle(
-            DeactivateProjectCommand request,
+            RestoreProjectCommand request,
             CancellationToken cancellationToken)
         {
+            // IgnoreQueryFilters() nécessaire pour accéder aux projets supprimés
             var project = await _context.Projects
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(p =>
                     p.Id == request.ProjectId &&
-                    p.UserId == _currentUser.UserId,
+                    p.UserId == _currentUser.UserId &&
+                    p.DeletedAt != null,
                     cancellationToken)
-                ?? throw new NotFoundException("Project not found");
+                ?? throw new NotFoundException($"Deleted project {request.ProjectId} not found");
 
-            project.Deactivate(_dateTimeProvider);
+            project.Restore(_dateTimeProvider);
 
             await _context.SaveChangesAsync(cancellationToken);
 

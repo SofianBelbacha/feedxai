@@ -13,7 +13,7 @@
         </span>
         } @else {
         <span class="projects__limit-badge">
-          Plan {{ plan() }} — {{ activeProjects().length }}/ ∞ 
+          Plan {{ plan() }} — {{ activeProjects().length }}/ ∞
         </span>
         }
       </p>
@@ -139,22 +139,57 @@
           </svg>
         </button>
 
-        <button class="btn btn--icon" title="Modifier le projet" (click)="openEditModal(project); $event.stopPropagation()">
+        <button class="btn btn--icon" title="Modifier le projet"
+          (click)="openEditModal(project); $event.stopPropagation()">
           ✏️
         </button>
 
-        <button class="btn btn--icon btn--danger" title="Supprimer le projet" (click)="openDeleteModal(project); $event.stopPropagation()">
+        <button class="btn btn--icon btn--danger" title="Supprimer le projet"
+          (click)="openDeleteModal(project); $event.stopPropagation()">
           🗑️
         </button>
 
 
       </div>
-      
+
 
     </article>
     }
 
   </div>
+  }
+
+  @if (showTrash()) {
+  <section class="trash-section">
+    <h3 class="trash-section__title">
+      Corbeille
+      <span class="trash-section__subtitle">
+        Les projets sont supprimés définitivement après 30 jours
+      </span>
+    </h3>
+
+    @if (loadingTrash()) {
+    <p class="loading">Chargement...</p>
+    } @else if (deletedProjects().length === 0) {
+    <p class="empty-state">La corbeille est vide.</p>
+    } @else {
+    <ul class="trash-list">
+      @for (project of deletedProjects(); track project.id) {
+      <li class="trash-item">
+        <div class="trash-item__info">
+          <span class="trash-item__name">{{ project.name }}</span>
+          <span class="trash-item__countdown" [class.trash-item__countdown--urgent]="project.daysUntilPurge <= 7">
+            Suppression définitive dans {{ project.daysUntilPurge }} jour(s)
+          </span>
+        </div>
+        <button class="btn btn--ghost btn--sm" (click)="onRestore(project)" [disabled]="restoringId() === project.id">
+          {{ restoringId() === project.id ? 'Restauration...' : 'Restaurer' }}
+        </button>
+      </li>
+      }
+    </ul>
+    }
+  </section>
   }
 
   <!-- ── Upgrade banner pour Free ──────────────────────────── -->
@@ -185,6 +220,13 @@
           <line x1="14" y1="2" x2="2" y2="14" />
         </svg>
       </button>
+      <button class="btn btn--ghost btn--icon" (click)="toggleTrash()" title="Corbeille">
+        🗑️
+        @if (deletedProjects().length > 0) {
+        <span class="badge">{{ deletedProjects().length }}</span>
+        }
+      </button>
+
     </div>
 
     <div class="modal__body">
@@ -244,6 +286,7 @@
   </div>
 </div>
 }
+
 @if (showSnippetModal()) {
 <div class="modal-overlay" (click)="closeSnippetModal()">
   <div class="modal" (click)="$event.stopPropagation()">
@@ -276,91 +319,74 @@
 }
 
 @if (showEditModal()) {
-  <div class="modal-backdrop" (click)="closeEditModal()">
-    <div class="modal" (click)="$event.stopPropagation()" role="dialog"
-         aria-modal="true" aria-labelledby="edit-modal-title">
+<div class="modal-backdrop" (click)="closeEditModal()">
+  <div class="modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true"
+    aria-labelledby="edit-modal-title">
 
-      <h2 id="edit-modal-title" class="modal__title">Modifier le projet</h2>
+    <h2 id="edit-modal-title" class="modal__title">Modifier le projet</h2>
 
-      <div class="form-group">
-        <label for="edit-name">Nom <span class="required">*</span></label>
-        <input
-          id="edit-name"
-          type="text"
-          class="input"
-          [value]="editName()"
-          (input)="editName.set($any($event.target).value)"
-          maxlength="100"
-          placeholder="Nom du projet" />
-        <span class="char-count">{{ editName().length }}/100</span>
-      </div>
-
-      <div class="form-group">
-        <label for="edit-description">Description</label>
-        <textarea
-          id="edit-description"
-          class="input input--textarea"
-          [value]="editDescription()"
-          (input)="editDescription.set($any($event.target).value)"
-          maxlength="500"
-          rows="3"
-          placeholder="Description (optionnelle)">
-        </textarea>
-        <span class="char-count">{{ editDescription().length }}/500</span>
-      </div>
-
-      @if (editError()) {
-        <p class="form-error">{{ editError() }}</p>
-      }
-
-      <div class="modal__actions">
-        <button
-          class="btn btn--primary"
-          (click)="onSaveEdit()"
-          [disabled]="saving()">
-          {{ saving() ? 'Sauvegarde...' : 'Sauvegarder' }}
-        </button>
-        <button class="btn btn--ghost" (click)="closeEditModal()">
-          Annuler
-        </button>
-      </div>
-
+    <div class="form-group">
+      <label for="edit-name">Nom <span class="required">*</span></label>
+      <input id="edit-name" type="text" class="input" [value]="editName()"
+        (input)="editName.set($any($event.target).value)" maxlength="100" placeholder="Nom du projet" />
+      <span class="char-count">{{ editName().length }}/100</span>
     </div>
+
+    <div class="form-group">
+      <label for="edit-description">Description</label>
+      <textarea id="edit-description" class="input input--textarea" [value]="editDescription()"
+        (input)="editDescription.set($any($event.target).value)" maxlength="500" rows="3"
+        placeholder="Description (optionnelle)">
+        </textarea>
+      <span class="char-count">{{ editDescription().length }}/500</span>
+    </div>
+
+    @if (editError()) {
+    <p class="form-error">{{ editError() }}</p>
+    }
+
+    <div class="modal__actions">
+      <button class="btn btn--primary" (click)="onSaveEdit()" [disabled]="saving()">
+        {{ saving() ? 'Sauvegarde...' : 'Sauvegarder' }}
+      </button>
+      <button class="btn btn--ghost" (click)="closeEditModal()">
+        Annuler
+      </button>
+    </div>
+
   </div>
+</div>
 }
 
 @if (showDeleteModal()) {
-  <div class="modal-backdrop" (click)="closeDeleteModal()">
-    <div class="modal modal--danger" (click)="$event.stopPropagation()" role="dialog"
-         aria-modal="true" aria-labelledby="delete-modal-title">
+<div class="modal-backdrop" (click)="closeDeleteModal()">
+  <div class="modal modal--danger" (click)="$event.stopPropagation()" role="dialog" aria-modal="true"
+    aria-labelledby="delete-modal-title">
 
-      <div class="modal__icon">⚠️</div>
+    <div class="modal__icon">⚠️</div>
 
-      <h2 id="delete-modal-title" class="modal__title">
-        Supprimer « {{ deletingProject()?.name }} » ?
-      </h2>
+    <h2 id="delete-modal-title" class="modal__title">
+      Supprimer « {{ deletingProject()?.name }} » ?
+    </h2>
 
-      <p class="modal__body">
-        Cette action est irréversible. Le projet sera désactivé
-        et ses feedbacks ne seront plus accessibles via le widget.
-      </p>
+    <p class="modal__body">
+      Cette action est irréversible. Le projet sera désactivé
+      et ses feedbacks ne seront plus accessibles via le widget.
+    </p>
 
-      @if (deleteError()) {
-        <p class="form-error">{{ deleteError() }}</p>
-      }
+    @if (deleteError()) {
+    <p class="form-error">{{ deleteError() }}</p>
+    }
 
-      <div class="modal__actions">
-        <button
-          class="btn btn--danger"
-          (click)="onConfirmDelete()"
-          [disabled]="deleting()">
-          {{ deleting() ? 'Suppression...' : 'Supprimer définitivement' }}
-        </button>
-        <button class="btn btn--ghost" (click)="closeDeleteModal()">
-          Annuler
-        </button>
-      </div>
-
+    <div class="modal__actions">
+      <button class="btn btn--danger" (click)="onConfirmDelete()" [disabled]="deleting()">
+        {{ deleting() ? 'Suppression...' : 'Supprimer définitivement' }}
+      </button>
+      <button class="btn btn--ghost" (click)="closeDeleteModal()">
+        Annuler
+      </button>
     </div>
+
   </div>
+</div>
 }

@@ -116,7 +116,7 @@ namespace AiReviewHub.Tests.Application.Feedbacks
             // Arrange
             var user = EntityBuilders.BuildUser();
             var project = Project.Create("Test", "", user.Id, _clock.UtcNow);
-            project.Deactivate(_clock); // projet inactif
+            //project.Deactivate(_clock); // projet inactif
             _context.Users.Add(user);
             _context.Projects.Add(project);
             await _context.SaveChangesAsync(TestContext.Current.CancellationToken);

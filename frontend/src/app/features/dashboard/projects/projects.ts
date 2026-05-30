@@ -1,5 +1,5 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { Project } from './projects.types';
+import { DeletedProject, Project } from './projects.types';
 import { ProjectsService } from './projects.service';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -45,6 +45,13 @@ export class Projects implements OnInit {
   deletingProject = signal<Project | null>(null);
   deleting = signal(false);
   deleteError = signal('');
+
+  // ─── State corbeille ──────────────────────────────────────────────────────
+  deletedProjects = signal<DeletedProject[]>([]);
+  showTrash = signal(false);
+  loadingTrash = signal(false);
+  restoringId = signal<string | null>(null);
+
 
 
   // ─── Plan & limites — source unique : DashboardContextService ─────────────
@@ -256,6 +263,39 @@ export class Projects implements OnInit {
         this.deleting.set(false);
         this.deleteError.set('Erreur lors de la suppression. Réessayez.');
       }
+    });
+  }
+
+  toggleTrash(): void {
+    this.showTrash.update(v => !v);
+    if (this.showTrash() && this.deletedProjects().length === 0) {
+      this.loadTrash();
+    }
+  }
+
+  loadTrash(): void {
+    this.loadingTrash.set(true);
+    this.service.getDeleted().subscribe({
+      next: (projects) => {
+        this.deletedProjects.set(projects);
+        this.loadingTrash.set(false);
+      },
+      error: () => this.loadingTrash.set(false)
+    });
+  }
+
+  onRestore(project: DeletedProject): void {
+    this.restoringId.set(project.id);
+
+    this.service.restore(project.id).subscribe({
+      next: () => {
+        // Retirer de la corbeille
+        this.deletedProjects.update(list => list.filter(p => p.id !== project.id));
+        this.restoringId.set(null);
+        // Recharger la liste active
+        this.load();
+      },
+      error: () => this.restoringId.set(null)
     });
   }
 }

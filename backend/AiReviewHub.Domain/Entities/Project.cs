@@ -15,6 +15,8 @@ namespace AiReviewHub.Domain.Entities
         public bool IsActive { get; private set; }
         public DateTime CreatedAt { get; private set; }
         public DateTime? UpdatedAt { get; private set; }
+        public DateTime? DeletedAt { get; private set; }
+        public bool IsDeleted => DeletedAt.HasValue;
 
         public Guid UserId { get; private set; }
         public User User { get; private set; } = null!;
@@ -63,15 +65,6 @@ namespace AiReviewHub.Domain.Entities
             UpdatedAt = dateTimeProvider.UtcNow;
         }
 
-        public void Deactivate(IDateTimeProvider dateTimeProvider)
-        {
-            if (!IsActive)
-                throw new InvalidOperationException("Project is already inactive");
-
-            IsActive = false;
-            UpdatedAt = dateTimeProvider.UtcNow;
-        }
-
         private static string GenerateToken() =>
             Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLower();
 
@@ -94,6 +87,26 @@ namespace AiReviewHub.Domain.Entities
         {
             WidgetConfigJson = configJson;
             UpdatedAt = now;
+        }
+
+        public void SoftDelete(IDateTimeProvider dateTimeProvider)
+        {
+            if (IsDeleted)
+                throw new InvalidOperationException("Project is already deleted");
+
+            IsActive = false;
+            DeletedAt = dateTimeProvider.UtcNow;
+            UpdatedAt = dateTimeProvider.UtcNow;
+        }
+
+        public void Restore(IDateTimeProvider dateTimeProvider)
+        {
+            if (!IsDeleted)
+                throw new InvalidOperationException("Project is not deleted");
+
+            IsActive = true;
+            DeletedAt = null;
+            UpdatedAt = dateTimeProvider.UtcNow;
         }
     }
 }

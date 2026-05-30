@@ -33,6 +33,11 @@ namespace AiReviewHub.Infrastructure.Persistence.Configurations
             builder.Property(p => p.CreatedAt)
                 .IsRequired();
 
+            builder.Property(x => x.DeletedAt)
+                .IsRequired(false);
+
+            builder.HasQueryFilter(p => p.DeletedAt == null);
+
             builder.Property(p => p.WidgetConfigJson)
                 .HasColumnType("jsonb"); // PostgreSQL JSON natif
 

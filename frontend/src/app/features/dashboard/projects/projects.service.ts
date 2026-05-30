@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { Project, CreateProjectRequest, UpdateProjectResult, UpdateProjectRequest } from './projects.types';
+import { Project, CreateProjectRequest, UpdateProjectResult, UpdateProjectRequest, DeletedProject } from './projects.types';
 
 export interface PagedResult<T> {
   data: T[];
@@ -32,6 +32,21 @@ export class ProjectsService {
   delete(id: string): Observable<void> {
     return this.http.delete<void>(
       `${this.API}/projects/${id}`,
+      { withCredentials: true }
+    );
+  }
+
+  getDeleted(): Observable<DeletedProject[]> {
+    return this.http.get<DeletedProject[]>(
+      `${this.API}/projects/deleted`,
+      { withCredentials: true }
+    );
+  }
+
+  restore(id: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.API}/projects/${id}/restore`,
+      {},
       { withCredentials: true }
     );
   }

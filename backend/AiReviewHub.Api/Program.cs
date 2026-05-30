@@ -142,6 +142,12 @@ RecurringJob.AddOrUpdate<RefreshTokenCleanupJob>(
     job => job.CleanupExpiredTokens(),
     Cron.Daily);
 
+RecurringJob.AddOrUpdate<PurgeDeletedProjectsJob>(
+    "purge-deleted-projects",
+    job => job.ExecuteAsync(),
+    Cron.Daily); // tous les jours à minuit
+
+
 // Dans le pipeline
 app.UseCors("Angular");
 

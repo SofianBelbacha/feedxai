@@ -23,3 +23,13 @@ export interface UpdateProjectResult {
   name: string;
   description: string;
 }
+
+export interface DeletedProject {
+  id: string;
+  name: string;
+  description: string;
+  deletedAt: string;
+  purgeDate: string;
+  daysUntilPurge: number;
+}
+
