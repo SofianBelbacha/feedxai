@@ -4,7 +4,11 @@ export interface DashboardStats {
   inProgressCount: number;
   resolvedCount: number;
   highPriorityCount: number;
-  pendingAiCount:    number;
+  pendingAiCount: number;
+  resolvedRate: number;
+  previousPeriodTotal: number;
+  growthPercent: number;
+
 }
 
 export interface TrendPoint {
@@ -14,19 +18,18 @@ export interface TrendPoint {
 
 export interface CategoryStat {
   category: string;
-  count:    number;
-  percent:  number;
+  count: number;
+  percent: number;
 }
 
 export interface ProjectStat {
-  projectName:   string;
+  projectName: string;
   feedbackCount: number;
 }
 
-export interface AiInsights {
+export interface AutoInsights {
   bullets: string[];
 }
-
 
 export interface RecentFeedback {
   id: string;

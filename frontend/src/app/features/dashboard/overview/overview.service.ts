@@ -2,15 +2,16 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { DashboardStats, TrendPoint, RecentFeedback, CategoryStat, AiInsights, ProjectStat } from './overview.types';
+import { DashboardStats, TrendPoint, RecentFeedback, CategoryStat, ProjectStat, AutoInsights } from './overview.types';
 
 export interface DashboardData {
-  stats:           DashboardStats;
-  trends:          TrendPoint[];
+  stats: DashboardStats;
+  trends: TrendPoint[];
   recentFeedbacks: RecentFeedback[];
-  categoryStats:   CategoryStat[];
-  projectStats:    ProjectStat[];
-  aiInsights:      AiInsights | null;
+  categoryStats: CategoryStat[];
+  projectStats: ProjectStat[];
+  autoInsights: AutoInsights | null;  
+  hasDataInPeriod: boolean;           
 }
 
 @Injectable({ providedIn: 'root' })

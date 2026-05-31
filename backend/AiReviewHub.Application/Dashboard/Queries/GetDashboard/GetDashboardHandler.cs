@@ -1,6 +1,7 @@
 ﻿using AiReviewHub.Application.Abstractions;
 using AiReviewHub.Application.Dashboard.Queries.GetDashboard;
 using AiReviewHub.Domain.Abstractions;
+using AiReviewHub.Domain.Entities;
 using AiReviewHub.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -26,15 +27,17 @@ namespace AiReviewHub.Application.Dashboard.Queries.GetDashboard
             _dateTimeProvider = dateTimeProvider;
         }
 
-        public async Task<GetDashboardResult> Handle(
-            GetDashboardQuery request,
-            CancellationToken cancellationToken)
+        public async Task<GetDashboardResult> Handle(GetDashboardQuery request, CancellationToken cancellationToken)
         {
             var userId = _currentUser.UserId;
             var now = _dateTimeProvider.UtcNow;
             var from = now.AddDays(-request.Days);
 
-            // ── Base query ───────────────────────────────────────────
+            // Période précédente pour le calcul de croissance
+            var prevFrom = from.AddDays(-request.Days);
+            var prevTo = from;
+
+            // ── Base query ──────────────────────────────────────────
             var baseQuery = _context.Feedbacks
                 .AsNoTracking()
                 .Where(f => f.Project.UserId == userId);
@@ -42,10 +45,9 @@ namespace AiReviewHub.Application.Dashboard.Queries.GetDashboard
             if (request.ProjectId.HasValue)
                 baseQuery = baseQuery.Where(f => f.ProjectId == request.ProjectId.Value);
 
-            // ── Feedbacks sur la période demandée ────────────────────
-            var periodQuery = baseQuery.Where(f => f.CreatedAt >= from);
-
-            var periodFeedbacks = await periodQuery
+            // ── Période courante ────────────────────────────────────
+            var periodFeedbacks = await baseQuery
+                .Where(f => f.CreatedAt >= from)
                 .Select(f => new
                 {
                     f.Id,
@@ -56,33 +58,62 @@ namespace AiReviewHub.Application.Dashboard.Queries.GetDashboard
                     Status = f.Status,
                     AiAnalysisStatus = f.AiAnalysisStatus,
                     f.CreatedAt,
+                    ProjectId  = f.ProjectId,
                     ProjectName = f.Project.Name
                 })
                 .ToListAsync(cancellationToken);
 
-            // ── Stats ─────────────────────────────────────────────────
+            // ── Période précédente — COUNT uniquement ───────────────
+            // Une seule agrégation SQL, pas de chargement en mémoire
+            var previousCount = await baseQuery
+                .Where(f => f.CreatedAt >= prevFrom && f.CreatedAt < prevTo)
+                .CountAsync(cancellationToken);
+
+            // ── État vide sur la période ────────────────────────────
+            var hasAnyFeedbacks = await baseQuery.AnyAsync(cancellationToken);
+            var hasDataInPeriod = periodFeedbacks.Any();
+
+
+            // ── Stats ───────────────────────────────────────────────
+            var total = periodFeedbacks.Count;
+            var resolved = periodFeedbacks.Count(f => f.Status == FeedbackStatus.Done);
+
+            double? growthPercent = previousCount == 0
+                ? null                                                           
+                : Math.Round((double)(total - previousCount) / previousCount * 100, 1);
+
             var stats = new DashboardStats(
-                TotalFeedbacks: await baseQuery.CountAsync(cancellationToken),
+                TotalFeedbacks: total,
                 TodoCount: periodFeedbacks.Count(f => f.Status == FeedbackStatus.Todo),
                 InProgressCount: periodFeedbacks.Count(f => f.Status == FeedbackStatus.InProgress),
-                ResolvedCount: periodFeedbacks.Count(f => f.Status == FeedbackStatus.Done),
+                ResolvedCount: resolved,
                 HighPriorityCount: periodFeedbacks.Count(f =>
                     f.Priority == FeedbackPriority.High ||
                     f.Priority == FeedbackPriority.Critical),
                 PendingAiCount: periodFeedbacks.Count(f =>
                     f.AiAnalysisStatus == AiAnalysisStatus.Pending ||
-                    f.AiAnalysisStatus == AiAnalysisStatus.Failed)
+                    f.AiAnalysisStatus == AiAnalysisStatus.Failed),
+                ResolvedRate: total > 0 ? Math.Round((double)resolved / total * 100, 1) : 0,
+                PreviousPeriodTotal: previousCount,
+                GrowthPercent: growthPercent
             );
 
-            // ── Tendances par jour ────────────────────────────────────
-            var trends = periodFeedbacks
+            var countByDate = periodFeedbacks
                 .GroupBy(f => f.CreatedAt.Date)
-                .OrderBy(g => g.Key)
-                .Select(g => new TrendPoint(g.Key.ToString("yyyy-MM-dd"), g.Count()))
+                .ToDictionary(g => g.Key, g => g.Count());
+
+
+            // ── Tendances par jour ──────────────────────────────────
+            var trends = Enumerable
+                .Range(0, request.Days)
+                .Select(offset => from.Date.AddDays(offset))
+                .Where(date => date <= now.Date)
+                .Select(date => new TrendPoint(
+                    date.ToString("yyyy-MM-dd"),
+                    countByDate.TryGetValue(date, out var count) ? count : 0))
                 .ToList();
 
-            // ── Stats par catégorie ───────────────────────────────────
-            var total = periodFeedbacks.Count;
+            // ── Stats par catégorie ─────────────────────────────────
             var categoryStats = periodFeedbacks
                 .GroupBy(f => f.Category)
                 .OrderByDescending(g => g.Count())
@@ -92,35 +123,33 @@ namespace AiReviewHub.Application.Dashboard.Queries.GetDashboard
                     total > 0 ? Math.Round((double)g.Count() / total * 100, 1) : 0))
                 .ToList();
 
-            // ── Projets les plus actifs ───────────────────────────────
+            // ── Projets les plus actifs ─────────────────────────────
             var projectStats = periodFeedbacks
-                .GroupBy(f => f.ProjectName)
+                .GroupBy(f => new { f.ProjectId, f.ProjectName })
                 .OrderByDescending(g => g.Count())
                 .Take(5)
-                .Select(g => new ProjectStat(g.Key, g.Count()))
+                .Select(g => new ProjectStat(g.Key.ProjectId, g.Key.ProjectName, g.Count()))
                 .ToList();
 
-            // ── AI Insights — synthèse des AiSummary disponibles ─────
-            // Simple agrégation textuelle pour le MVP
-            // À terme : appel OpenAI dédié sur les summaries groupés
-            AiInsights? aiInsights = null;
-            var completedSummaries = periodFeedbacks
-                .Where(f => f.AiAnalysisStatus == AiAnalysisStatus.Completed
-                         && !string.IsNullOrEmpty(f.AiSummary))
-                .Take(50)
-                .ToList();
-
-            if (completedSummaries.Any())
+            // ── Synthèse automatique (renommée) ─────────────────────
+            AutoInsights? autoInsights = null;
+            if (categoryStats.Any())
             {
                 var bullets = categoryStats
                     .Take(4)
-                    .Select(c => $"{c.Percent}% des retours concernent la catégorie {c.Category}")
-                    .ToList();
+                    .Select(c => $"{c.Percent}% des retours concernent {GetCategoryLabel(c.Category)}")
+                    .ToList<string>();
 
-                aiInsights = new AiInsights(bullets);
+                if (growthPercent != 0)
+                {
+                    var direction = growthPercent > 0 ? "augmenté" : "diminué";
+                    bullets.Add($"Le volume de feedbacks a {direction} de {Math.Abs(growthPercent)}% vs la période précédente");
+                }
+
+                autoInsights = new AutoInsights(bullets);
             }
 
-            // ── Feedbacks récents ─────────────────────────────────────
+            // ── Feedbacks récents ───────────────────────────────────
             var recentDtos = periodFeedbacks
                 .OrderByDescending(f => f.CreatedAt)
                 .Take(10)
@@ -131,8 +160,20 @@ namespace AiReviewHub.Application.Dashboard.Queries.GetDashboard
                     f.CreatedAt))
                 .ToList();
 
-            return new GetDashboardResult(stats, trends, recentDtos, categoryStats, projectStats, aiInsights);
+            return new GetDashboardResult(
+                stats, trends, recentDtos,
+                categoryStats, projectStats,
+                autoInsights hasDataInPeriod);
         }
+
+        private static string GetCategoryLabel(string category) => category switch
+        {
+            "Bug" => "les bugs",
+            "FeatureRequest" => "les demandes de fonctionnalités",
+            "Question" => "les questions",
+            _ => category.ToLower()
+        };
     }
 }
+
 
