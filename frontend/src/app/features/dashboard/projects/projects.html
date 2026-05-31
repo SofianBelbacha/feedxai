@@ -27,7 +27,13 @@
         <line x1="2" y1="8" x2="14" y2="8" />
       </svg>
       Nouveau projet
-    </button>
+      </button>
+            <button class="btn btn--ghost btn--icon" (click)="toggleTrash()" title="Corbeille">
+          🗑️
+          @if (deletedProjects().length > 0) {
+          <span class="badge">{{ deletedProjects().length }}</span>
+          }
+      </button>
   </header>
 
   <!-- ── Loading ───────────────────────────────────────────── -->
@@ -220,13 +226,6 @@
           <line x1="14" y1="2" x2="2" y2="14" />
         </svg>
       </button>
-      <button class="btn btn--ghost btn--icon" (click)="toggleTrash()" title="Corbeille">
-        🗑️
-        @if (deletedProjects().length > 0) {
-        <span class="badge">{{ deletedProjects().length }}</span>
-        }
-      </button>
-
     </div>
 
     <div class="modal__body">

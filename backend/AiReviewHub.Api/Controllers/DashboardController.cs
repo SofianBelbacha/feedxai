@@ -20,10 +20,11 @@ namespace AiReviewHub.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> Get(
             [FromQuery] Guid? projectId,
-            CancellationToken cancellationToken)
+            [FromQuery] int days = 30,
+            CancellationToken cancellationToken = default)
         {
             var result = await _mediator.Send(
-                new GetDashboardQuery(projectId),
+                new GetDashboardQuery(projectId, days),
                 cancellationToken);
 
             return Ok(result);

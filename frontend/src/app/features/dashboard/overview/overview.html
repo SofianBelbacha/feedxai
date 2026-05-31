@@ -1,48 +1,45 @@
-<!-- overview.html — Inbox orientée action -->
-<div class="inbox">
+<div class="overview">
 
-  <!-- ══════════════════════════════════════════════════════════
-       HEADER
-       ══════════════════════════════════════════════════════════ -->
-  <header class="inbox__header">
-    <div class="inbox__header-left">
-      <h1 class="inbox__title">
-        Bonjour, {{ firstName() }}.
-      </h1>
-      <p class="inbox__subtitle">
-        @if (currentProject()) {
-          Projet actif — <strong>{{ currentProject()!.name }}</strong>
-        } @else {
-          Vue globale de tous vos projets
-        }
+  <!-- ══ HEADER ══════════════════════════════════════════════════════════════ -->
+  <header class="overview__header">
+    <div class="overview__header-left">
+      <h1 class="overview__title">Overview</h1>
+      <p class="overview__subtitle">
+        Vue d'ensemble de vos feedbacks et tendances produit.
       </p>
     </div>
-    <a routerLink="/dashboard/feedbacks" class="inbox__header-cta">
-      Voir tous les feedbacks
-      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8"
-           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <line x1="2" y1="7" x2="12" y2="7"/>
-        <polyline points="8 3 12 7 8 11"/>
-      </svg>
-    </a>
+
+    <!-- Sélecteur de période -->
+    <div class="period-selector" role="group" aria-label="Période d'analyse">
+      @for (d of periods; track d) {
+        <button
+          class="period-btn"
+          [class.period-btn--active]="selectedDays() === d"
+          (click)="setDays(d)">
+          {{ d }}j
+        </button>
+      }
+    </div>
   </header>
 
-  <!-- ══════════════════════════════════════════════════════════
-       LOADING
-       ══════════════════════════════════════════════════════════ -->
+  <!-- ══ LOADING ══════════════════════════════════════════════════════════════ -->
   @if (loading()) {
-    <div class="inbox__loading">
-      <div class="inbox__skel inbox__skel--kpi"></div>
-      <div class="inbox__skel inbox__skel--alert"></div>
-      <div class="inbox__skel inbox__skel--feed"></div>
+    <div class="overview__loading">
+      <div class="skel skel--wide"></div>
+      <div class="skel-row">
+        <div class="skel skel--kpi"></div>
+        <div class="skel skel--kpi"></div>
+        <div class="skel skel--kpi"></div>
+        <div class="skel skel--kpi"></div>
+      </div>
+      <div class="skel skel--section"></div>
+      <div class="skel skel--section"></div>
     </div>
   }
 
-  <!-- ══════════════════════════════════════════════════════════
-       ERREUR
-       ══════════════════════════════════════════════════════════ -->
+  <!-- ══ ERREUR ═══════════════════════════════════════════════════════════════ -->
   @if (error()) {
-    <div class="inbox__error" role="alert">
+    <div class="overview__error" role="alert">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="8" cy="8" r="7"/>
@@ -50,213 +47,384 @@
         <circle cx="8" cy="11" r="0.5" fill="currentColor"/>
       </svg>
       {{ error() }}
-      <button class="inbox__error-retry" (click)="load()">Réessayer</button>
+      <button class="overview__error-retry" (click)="load()">Réessayer</button>
     </div>
   }
 
   @if (!loading() && !error()) {
 
-    <!-- ════════════════════════════════════════════════════════
-         BANDE D'ALERTE — uniquement si urgents non traités
-         ════════════════════════════════════════════════════════ -->
-    @if (urgentCount() > 0) {
-      <div class="inbox__alert" role="alert">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M8 2L1.5 14h13L8 2z"/>
-          <line x1="8" y1="7" x2="8" y2="10"/>
-          <circle cx="8" cy="12.5" r="0.5" fill="currentColor"/>
-        </svg>
-        <span>
-          <strong>{{ urgentCount() }} feedback{{ urgentCount() > 1 ? 's' : '' }} urgent{{ urgentCount() > 1 ? 's' : '' }}</strong>
-          non traité{{ urgentCount() > 1 ? 's' : '' }} — à traiter en priorité.
-        </span>
-        <a routerLink="/dashboard/feedbacks" class="inbox__alert-link">
-          Voir →
+    <!-- ══ EMPTY STATE — onboarding ══════════════════════════════════════════ -->
+    @if (isEmpty()) {
+      <div class="onboarding">
+        <div class="onboarding__icon" aria-hidden="true">
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <rect x="8" y="16" width="48" height="36" rx="4"/>
+            <path d="M20 16V12a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v4"/>
+            <line x1="32" y1="28" x2="32" y2="40"/>
+            <line x1="26" y1="34" x2="38" y2="34"/>
+          </svg>
+        </div>
+        <h2 class="onboarding__title">Bienvenue sur AiReviewHub 👋</h2>
+        <p class="onboarding__subtitle">
+          Commencez à collecter et analyser vos feedbacks en 3 étapes simples.
+        </p>
+        <ol class="onboarding__steps">
+          <li class="onboarding__step">
+            <span class="onboarding__step-num">1</span>
+            <div>
+              <strong>Créez votre premier projet</strong>
+              <p>Organisez vos feedbacks par produit ou équipe.</p>
+            </div>
+          </li>
+          <li class="onboarding__step">
+            <span class="onboarding__step-num">2</span>
+            <div>
+              <strong>Installez le widget</strong>
+              <p>Une ligne de code suffit pour collecter les retours.</p>
+            </div>
+          </li>
+          <li class="onboarding__step">
+            <span class="onboarding__step-num">3</span>
+            <div>
+              <strong>Collectez vos premiers feedbacks</strong>
+              <p>L'IA les analyse et les priorise automatiquement.</p>
+            </div>
+          </li>
+        </ol>
+        <a routerLink="/dashboard/projects" class="onboarding__cta">
+          Créer un projet →
         </a>
       </div>
     }
 
-    <!-- ════════════════════════════════════════════════════════
-         KPI CARDS — 3 métriques actionnables uniquement
-         ════════════════════════════════════════════════════════ -->
-    <section class="inbox__kpi" aria-label="Indicateurs clés">
+    @if (!isEmpty()) {
 
-      <!-- À traiter -->
-      <a routerLink="/dashboard/feedbacks" class="kpi-card kpi-card--todo">
-        <div class="kpi-card__icon" aria-hidden="true">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
-               stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="10" cy="10" r="8"/>
-            <line x1="10" y1="6" x2="10" y2="10"/>
-            <line x1="10" y1="10" x2="13" y2="13"/>
-          </svg>
-        </div>
-        <div class="kpi-card__body">
-          <span class="kpi-card__value">{{ stats().todoCount }}</span>
-          <span class="kpi-card__label">À traiter</span>
-        </div>
-        <svg class="kpi-card__arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor"
-             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polyline points="4 2 10 7 4 12"/>
-        </svg>
-      </a>
+      <!-- ══ ALERTES ══════════════════════════════════════════════════════════ -->
+      @if (urgentCount() > 0 || quotaWarning() || stats().pendingAiCount > 0) {
+        <div class="alerts">
+          @if (quotaWarning(); as warn) {
+            <div class="alert alert--{{ warn.type }}">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8 2L1.5 14h13L8 2z"/>
+                <line x1="8" y1="7" x2="8" y2="10"/>
+                <circle cx="8" cy="12.5" r="0.5" fill="currentColor"/>
+              </svg>
+              {{ warn.message }}
+              <a routerLink="/dashboard/billing" class="alert__link">Upgrader →</a>
+            </div>
+          }
 
-      <!-- Urgents -->
-      <a routerLink="/dashboard/feedbacks" class="kpi-card kpi-card--urgent">
-        <div class="kpi-card__icon" aria-hidden="true">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
-               stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10 2L2 17h16L10 2z"/>
-            <line x1="10" y1="9" x2="10" y2="12"/>
-            <circle cx="10" cy="15" r="0.5" fill="currentColor"/>
-          </svg>
-        </div>
-        <div class="kpi-card__body">
-          <span class="kpi-card__value">{{ stats().highPriorityCount }}</span>
-          <span class="kpi-card__label">Priorité haute</span>
-        </div>
-        <svg class="kpi-card__arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor"
-             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polyline points="4 2 10 7 4 12"/>
-        </svg>
-      </a>
+          @if (stats().pendingAiCount > 0) {
+            <div class="alert alert--info">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="8" cy="8" r="7"/>
+                <line x1="8" y1="5" x2="8" y2="8.5"/>
+                <circle cx="8" cy="11" r="0.5" fill="currentColor"/>
+              </svg>
+              <strong>{{ stats().pendingAiCount }}</strong>
+              feedback{{ stats().pendingAiCount > 1 ? 's' : '' }} en attente d'analyse IA.
+            </div>
+          }
 
-      <!-- En cours -->
-      <div class="kpi-card kpi-card--progress">
-        <div class="kpi-card__icon" aria-hidden="true">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
-               stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="10" cy="10" r="8"/>
-            <path d="M10 6v4l3 3"/>
-          </svg>
-        </div>
-        <div class="kpi-card__body">
-          <span class="kpi-card__value">{{ stats().inProgressCount }}</span>
-          <span class="kpi-card__label">En cours</span>
-        </div>
-        <!-- Sparkline 7 jours -->
-        <div class="kpi-card__sparkline" aria-hidden="true">
-          @for (point of sparkline7(); track trackByDate($index, point)) {
-            <div
-              class="kpi-card__spark-bar"
-              [style.height.%]="getSparklineHeight(point.count)"
-              [title]="point.date + ' : ' + point.count">
+          @if (urgentCount() > 0) {
+            <div class="alert alert--warning">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8 2L1.5 14h13L8 2z"/>
+                <line x1="8" y1="7" x2="8" y2="10"/>
+                <circle cx="8" cy="12.5" r="0.5" fill="currentColor"/>
+              </svg>
+              <strong>{{ urgentCount() }}</strong>
+              feedback{{ urgentCount() > 1 ? 's urgents' : ' urgent' }} à traiter en priorité.
+              <a routerLink="/dashboard/feedbacks" class="alert__link">Voir →</a>
             </div>
           }
         </div>
-      </div>
+      }
 
-    </section>
+      <!-- ══ KPI CARDS ════════════════════════════════════════════════════════ -->
+      <section class="kpis" aria-label="Indicateurs clés">
 
-    <!-- ════════════════════════════════════════════════════════
-         FEED — Inbox des feedbacks à traiter
-         ════════════════════════════════════════════════════════ -->
-    <section class="inbox__feed" aria-label="Feedbacks à traiter">
-
-      <div class="inbox__feed-header">
-        <h2 class="inbox__feed-title">
-          À traiter
-          @if (todoFeedbacks().length > 0) {
-            <span class="inbox__feed-count">{{ todoFeedbacks().length }}</span>
-          }
-        </h2>
-        <a routerLink="/dashboard/feedbacks" class="inbox__feed-link">
-          Tout voir →
-        </a>
-      </div>
-
-      <!-- État vide -->
-      @if (todoFeedbacks().length === 0) {
-        <div class="inbox__empty">
-          <div class="inbox__empty-icon" aria-hidden="true">
-            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2"
+        <div class="kpi-card kpi-card--total">
+          <div class="kpi-card__icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
                  stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 11 4 6 4 44 44 44 44 6 39 11"/>
-              <rect x="9" y="2" width="30" height="12" rx="2"/>
-              <polyline points="16 26 21 31 32 20"/>
+              <path d="M4 4h12v12H4z M8 9h4 M8 12h4"/>
             </svg>
           </div>
-          <p class="inbox__empty-title">Aucun feedback à traiter</p>
-          <p class="inbox__empty-desc">
-            Partagez votre widget client pour commencer à recevoir des retours.
-          </p>
-          <a routerLink="/dashboard/widget" class="inbox__empty-cta">
-            Configurer le widget →
-          </a>
+          <div class="kpi-card__body">
+            <span class="kpi-card__value">{{ stats().totalFeedbacks }}</span>
+            <span class="kpi-card__label">Feedbacks reçus</span>
+            <span class="kpi-card__sub">sur {{ selectedDays() }} derniers jours</span>
+          </div>
         </div>
-      }
 
-      <!-- Liste des feedbacks -->
-      @if (todoFeedbacks().length > 0) {
-        <ul class="inbox__list" role="list">
-          @for (fb of todoFeedbacks(); track trackById($index, fb)) {
-            <li class="inbox-item inbox-item--{{ getPriorityConfig(fb.priority).cls }}">
+        <a routerLink="/dashboard/feedbacks" class="kpi-card kpi-card--todo">
+          <div class="kpi-card__icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="10" cy="10" r="8"/>
+              <line x1="10" y1="6" x2="10" y2="10"/>
+              <line x1="10" y1="10" x2="13" y2="13"/>
+            </svg>
+          </div>
+          <div class="kpi-card__body">
+            <span class="kpi-card__value">{{ stats().todoCount }}</span>
+            <span class="kpi-card__label">À traiter</span>
+          </div>
+          <svg class="kpi-card__arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="4 2 10 7 4 12"/>
+          </svg>
+        </a>
 
-              <!-- Barre de priorité (left border) -->
-              <span class="inbox-item__priority-bar" aria-hidden="true"></span>
+        <a routerLink="/dashboard/feedbacks" class="kpi-card kpi-card--urgent">
+          <div class="kpi-card__icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 2L2 17h16L10 2z"/>
+              <line x1="10" y1="9" x2="10" y2="12"/>
+              <circle cx="10" cy="15" r="0.5" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="kpi-card__body">
+            <span class="kpi-card__value">{{ stats().highPriorityCount }}</span>
+            <span class="kpi-card__label">Priorité haute</span>
+          </div>
+          <svg class="kpi-card__arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="4 2 10 7 4 12"/>
+          </svg>
+        </a>
 
-              <!-- Corps -->
-              <div class="inbox-item__body">
+        <div class="kpi-card kpi-card--progress">
+          <div class="kpi-card__icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="10" cy="10" r="8"/>
+              <path d="M10 6v4l3 3"/>
+            </svg>
+          </div>
+          <div class="kpi-card__body">
+            <span class="kpi-card__value">{{ stats().inProgressCount }}</span>
+            <span class="kpi-card__label">En cours</span>
+          </div>
+          <div class="kpi-card__sparkline" aria-hidden="true">
+            @for (point of sparkline7(); track trackByDate($index, point)) {
+              <div class="kpi-card__spark-bar"
+                   [style.height.%]="getSparklineHeight(point.count)"
+                   [title]="point.date + ' : ' + point.count">
+              </div>
+            }
+          </div>
+        </div>
 
-                <!-- Ligne 1 : badge IA ou résumé -->
-                @if (fb.aiAnalysisStatus !== 'Completed') {
-                  <div class="inbox-item__ai">
-                    @switch (fb.aiAnalysisStatus) {
-                      @case ('Pending') {
-                        <span class="inbox-ai-badge inbox-ai-badge--pending">
-                          <span class="inbox-ai-dot"></span>
-                          Analyse en attente…
-                        </span>
-                      }
-                      @case ('Processing') {
-                        <span class="inbox-ai-badge inbox-ai-badge--processing">
-                          <span class="inbox-ai-spinner"></span>
-                          Analyse IA en cours…
-                        </span>
-                      }
-                      @case ('Failed') {
-                        <span class="inbox-ai-badge inbox-ai-badge--failed">
-                          Échec IA
-                        </span>
-                      }
-                      @default {}
-                    }
-                  </div>
-                }
+      </section>
 
-                <p class="inbox-item__summary">
-                  {{ fb.aiSummary || fb.content }}
-                </p>
+      <!-- ══ LAYOUT PRINCIPAL ══════════════════════════════════════════════════ -->
+      <div class="overview__grid">
 
-                <!-- Ligne 2 : meta -->
-                <div class="inbox-item__meta">
-                  <span class="inbox-item__priority-badge inbox-item__priority-badge--{{ getPriorityConfig(fb.priority).cls }}">
-                    {{ getPriorityConfig(fb.priority).label }}
-                  </span>
-                  <span class="inbox-item__category">{{ getCategoryLabel(fb.category) }}</span>
-                  <span class="inbox-item__date">{{ fb.createdAt | date:'dd MMM' }}</span>
+        <!-- Colonne principale -->
+        <div class="overview__main">
+
+          <!-- ── RÉSUMÉ IA ─────────────────────────────────────────────────── -->
+          @if (aiInsights()?.bullets?.length) {
+            <section class="ai-card">
+              <div class="ai-card__header">
+                <div class="ai-card__badge">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M8 2l1.5 4.5L14 8l-4.5 1.5L8 14l-1.5-4.5L2 8l4.5-1.5z"/>
+                  </svg>
+                  IA
                 </div>
+                <h2 class="ai-card__title">
+                  Résumé IA des {{ selectedDays() }} derniers jours
+                </h2>
+              </div>
+              <ul class="ai-card__bullets">
+                @for (bullet of aiInsights()!.bullets; track bullet) {
+                  <li class="ai-card__bullet">
+                    <span class="ai-card__bullet-dot" aria-hidden="true"></span>
+                    {{ bullet }}
+                  </li>
+                }
+              </ul>
+            </section>
+          }
 
+          <!-- ── INBOX FEEDBACKS ────────────────────────────────────────────── -->
+          <section class="inbox-section">
+            <div class="inbox-section__header">
+              <h2 class="inbox-section__title">
+                Derniers feedbacks
+                @if (todoFeedbacks().length > 0) {
+                  <span class="inbox-section__count">{{ todoFeedbacks().length }}</span>
+                }
+              </h2>
+              <a routerLink="/dashboard/feedbacks" class="inbox-section__link">
+                Voir tous →
+              </a>
+            </div>
+
+            @if (todoFeedbacks().length === 0) {
+              <div class="inbox-empty">
+                <div class="inbox-empty__icon" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 11 4 6 4 44 44 44 44 6 39 11"/>
+                    <rect x="9" y="2" width="30" height="12" rx="2"/>
+                    <polyline points="16 26 21 31 32 20"/>
+                  </svg>
+                </div>
+                <p class="inbox-empty__title">Aucun feedback à traiter</p>
+                <p class="inbox-empty__desc">
+                  Partagez votre widget client pour commencer à recevoir des retours.
+                </p>
+                <a routerLink="/dashboard/widget" class="inbox-empty__cta">
+                  Configurer le widget →
+                </a>
+              </div>
+            }
+
+            @if (todoFeedbacks().length > 0) {
+              <ul class="inbox-list" role="list">
+                @for (fb of todoFeedbacks(); track trackById($index, fb)) {
+                  <li class="inbox-item inbox-item--{{ getPriorityConfig(fb.priority).cls }}">
+                    <span class="inbox-item__bar" aria-hidden="true"></span>
+                    <div class="inbox-item__body">
+                      @if (fb.aiAnalysisStatus !== 'Completed') {
+                        <div class="inbox-item__ai">
+                          @switch (fb.aiAnalysisStatus) {
+                            @case ('Pending') {
+                              <span class="ai-badge ai-badge--pending">
+                                <span class="ai-dot"></span>En attente…
+                              </span>
+                            }
+                            @case ('Processing') {
+                              <span class="ai-badge ai-badge--processing">
+                                <span class="ai-spinner"></span>Analyse IA…
+                              </span>
+                            }
+                            @case ('Failed') {
+                              <span class="ai-badge ai-badge--failed">Échec IA</span>
+                            }
+                            @default {}
+                          }
+                        </div>
+                      }
+                      <p class="inbox-item__summary">{{ fb.aiSummary || fb.content }}</p>
+                      <div class="inbox-item__meta">
+                        <span class="priority-badge priority-badge--{{ getPriorityConfig(fb.priority).cls }}">
+                          {{ getPriorityConfig(fb.priority).label }}
+                        </span>
+                        <span class="inbox-item__cat">{{ getCategoryLabel(fb.category) }}</span>
+                        <span class="inbox-item__date">{{ fb.createdAt | date:'dd MMM' }}</span>
+                      </div>
+                    </div>
+                    <a routerLink="/dashboard/feedbacks" class="inbox-item__action" aria-label="Voir">
+                      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="4 2 10 7 4 12"/>
+                      </svg>
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
+
+        </div>
+
+        <!-- Colonne secondaire -->
+        <aside class="overview__aside">
+
+          <!-- ── TENDANCES PAR CATÉGORIE ────────────────────────────────────── -->
+          @if (categoryStats().length > 0) {
+            <section class="aside-card">
+              <h3 class="aside-card__title">Tendances</h3>
+              <ul class="category-list">
+                @for (cat of categoryStats(); track cat.category) {
+                  <li class="category-item">
+                    <div class="category-item__top">
+                      <span class="category-item__label">{{ getCategoryLabel(cat.category) }}</span>
+                      <span class="category-item__pct">{{ cat.percent }}%</span>
+                    </div>
+                    <div class="category-bar">
+                      <div class="category-bar__fill"
+                           [style.width.%]="getCategoryBarWidth(cat.percent)"
+                           [style.background-color]="getCategoryColor(cat.category)">
+                      </div>
+                    </div>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+
+          <!-- ── PROJETS ACTIFS — masqué si ≤ 1 ────────────────────────────── -->
+          @if (projectStats().length > 1) {
+            <section class="aside-card">
+              <h3 class="aside-card__title">Projets actifs</h3>
+              <ul class="project-list">
+                @for (p of projectStats(); track p.projectName) {
+                  <li class="project-item">
+                    <span class="project-item__name">{{ p.projectName }}</span>
+                    <span class="project-item__count">{{ p.feedbackCount }}</span>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+
+          <!-- ── QUOTA CARD ─────────────────────────────────────────────────── -->
+          @if (quotaState.quota(); as q) {
+            <section class="aside-card quota-card">
+              <div class="quota-card__top">
+                <h3 class="aside-card__title">Quota mensuel</h3>
+                @if (q.feedbacksLimit !== -1) {
+                  <span class="quota-card__count">
+                    {{ q.feedbacksThisMonth }} / {{ q.feedbacksLimit }}
+                  </span>
+                } @else {
+                  <span class="quota-card__unlimited">Illimité</span>
+                }
               </div>
 
-              <!-- Action rapide : voir le feedback -->
-              <a
-                routerLink="/dashboard/feedbacks"
-                class="inbox-item__action"
-                aria-label="Voir ce feedback">
-                <svg viewBox="0 0 14 14" fill="none" stroke="currentColor"
-                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <polyline points="4 2 10 7 4 12"/>
-                </svg>
-              </a>
+              @if (q.feedbacksLimit !== -1) {
+                <div class="quota-bar" role="progressbar"
+                     [attr.aria-valuenow]="quotaState.quotaPercent()"
+                     aria-valuemin="0" aria-valuemax="100">
+                  <div class="quota-bar__fill"
+                       [class.quota-bar__fill--warning]="quotaState.isNearLimit() && !quotaState.isAtLimit()"
+                       [class.quota-bar__fill--danger]="quotaState.isAtLimit()"
+                       [style.width.%]="quotaState.quotaPercent()">
+                  </div>
+                </div>
 
-            </li>
+                @if (quotaState.resetDateFormatted()) {
+                  <p class="quota-card__reset">
+                    Renouvellement le {{ quotaState.resetDateFormatted() }}
+                  </p>
+                }
+              }
+
+              @if (q.plan !== 'Team') {
+                <a routerLink="/dashboard/billing" class="quota-card__upgrade">
+                  Voir les plans →
+                </a>
+              }
+            </section>
           }
-        </ul>
-      }
 
-    </section>
+        </aside>
+
+      </div>
+
+    }
 
   }
 
