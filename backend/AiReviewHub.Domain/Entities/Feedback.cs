@@ -22,7 +22,7 @@ namespace AiReviewHub.Domain.Entities
         public FeedbackStatus Status { get; private set; }
         public DateTime CreatedAt { get; private set; }
         public DateTime? UpdatedAt { get; private set; }
-
+        public DateTime? ResolvedAt { get; private set; }
         public Guid ProjectId { get; private set; }
         public Project Project { get; private set; } = null!;
 
@@ -113,13 +113,20 @@ namespace AiReviewHub.Domain.Entities
                 throw new InvalidOperationException(
                     $"Feedback is already in {newStatus} status");
 
-            if (!AllowedTransitions.TryGetValue(Status, out var allowed)
-                || !allowed.Contains(newStatus))
+            if (!AllowedTransitions.TryGetValue(Status, out var allowed) || !allowed.Contains(newStatus))
                 throw new InvalidOperationException(
                     $"Cannot transition from {Status} to {newStatus}");
 
             Status = newStatus;
             UpdatedAt = now;
+
+            // Capturer la date de résolution
+            if (newStatus == FeedbackStatus.Done)
+                ResolvedAt = now;
+            // Si on repasse de Done à InProgress, on efface la date
+            else if (ResolvedAt.HasValue)
+                ResolvedAt = null;
+
         }
     }
 }

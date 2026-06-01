@@ -15,6 +15,7 @@ namespace AiReviewHub.Application.Dashboard.Queries.GetDashboard
         IReadOnlyList<TrendPoint> Trends,
         IReadOnlyList<DashboardFeedbackDto> RecentFeedbacks,
         IReadOnlyList<CategoryStat> CategoryStats,
+        IReadOnlyList<StatusStat> StatusStats,
         IReadOnlyList<ProjectStat> ProjectStats,
         AutoInsights? AutoInsights,
         bool HasAnyFeedbacks,
@@ -28,17 +29,23 @@ namespace AiReviewHub.Application.Dashboard.Queries.GetDashboard
         int ResolvedCount,
         int HighPriorityCount,
         int PendingAiCount,
-        double ResolvedRate,        // resolved / total * 100
-        int PreviousPeriodTotal, // pour le % d'évolution
-        double? GrowthPercent        // : +18%, -5%...
+        double ResolvedRate,
+        int PreviousPeriodTotal, 
+        double? GrowthPercent,       
+        double? PreviousResolvedRate,
+        double? ResolvedRateDelta,   
+        double AveragePerDay,            
+        double? AverageResolutionDays
     );
 
-    public record AutoInsights(IReadOnlyList<string> Bullets);
+    public record StatusStat(string Status, int Count, double Percent); // ← NOUVEAU
+
+    public record AutoInsights(IReadOnlyList<string> Bullets, IReadOnlyList<string> Insights);
 
     // CategoryStat, ProjectStat, TrendPoint, DashboardFeedbackDto inchangés
     public record TrendPoint(string Date, int Count);
 
-    public record CategoryStat(string Category, int Count, double Percent);
+    public record CategoryStat(string Category, int Count, double Percent, int PreviousCount, double? Delta);
 
     public record ProjectStat(
         Guid ProjectId,            

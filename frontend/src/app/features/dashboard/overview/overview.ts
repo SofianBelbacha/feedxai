@@ -10,10 +10,13 @@ import { UserService }            from '../../../core/services/user.service';
 import { DashboardContextService } from '../../../core/services/dashboard-context.service';
 import { RecentFeedback, TrendPoint } from './overview.types';
 import { QuotaStateService } from '../../../core/services/quota-state.service';
+import { BaseChartDirective } from 'ng2-charts';
+import { ChartData, ChartOptions } from 'chart.js';
+
 
 @Component({
   selector: 'app-overview',
-  imports: [CommonModule, DatePipe, RouterLink],
+  imports: [CommonModule, DatePipe, RouterLink, BaseChartDirective],
   templateUrl: './overview.html',
   styleUrl:    './overview.scss',
 })
@@ -42,13 +45,16 @@ export class Overview implements OnInit, OnDestroy {
   // ─── Computed — stats ─────────────────────────────────────────────────────
   readonly stats = computed(() => this.data()?.stats ?? {
     totalFeedbacks: 0, todoCount: 0, inProgressCount: 0,
-    resolvedCount: 0, highPriorityCount: 0, pendingAiCount: 0, growthPercent: 0, resolvedRate: 0, previousPeriodTotal: 0
+    resolvedCount: 0, highPriorityCount: 0, pendingAiCount: 0, 
+    growthPercent: 0, resolvedRate: 0, previousPeriodTotal: 0, resolvedRateDelta: 0,
+    previousResolvedRate: 0, averagePerDay: 0, averageResolutionDays: null
   });
 
   readonly categoryStats = computed(() => this.data()?.categoryStats ?? []);
   readonly projectStats  = computed(() => this.data()?.projectStats  ?? []);
   readonly autoInsights = computed(() => this.data()?.autoInsights ?? null);
   readonly hasDataInPeriod = computed(() => this.data()?.hasDataInPeriod ?? true);
+  readonly statusStats  = computed(() => this.data()?.statusStats  ?? []);
 
 
   readonly recentFeedbacks = computed(() => {
@@ -83,17 +89,125 @@ export class Overview implements OnInit, OnDestroy {
     return null;
   });
 
+  // données pour Chart.js
+  readonly chartData = computed<ChartData<'line'>>(() => {
+    const t = this.data()?.trends ?? [];
+    return {
+      labels: t.map(p => {
+        const d = new Date(p.date);
+        return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+      }),
+      datasets: [{
+        data:            t.map(p => p.count),
+        borderColor:     '#0F0F11',
+        backgroundColor: 'rgba(15, 15, 17, 0.05)',
+        borderWidth:     1.5,
+        pointRadius:     0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: '#0F0F11',
+        fill:            true,
+        tension:         0.4,  // courbe lissée
+      }]
+    };
+  });
+
+  readonly chartOptions: ChartOptions<'line'> = {
+    responsive:          true,
+    maintainAspectRatio: false,
+    animation:           { duration: 400 },
+    plugins: {
+      legend:  { display: false },
+      tooltip: {
+        mode:      'index',
+        intersect: false,
+        backgroundColor: '#0F0F11',
+        titleColor:      'rgba(255,255,255,0.5)',
+        bodyColor:       '#fff',
+        titleFont:       { size: 11 },
+        bodyFont:        { size: 13, weight: 'bold' },
+        padding:         10,
+        displayColors:   false,
+        callbacks: {
+          title: (items) => items[0]?.label ?? '',
+          label: (item)  => `${item.raw} feedback${Number(item.raw) > 1 ? 's' : ''}`,
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid:   { display: false },
+        border: { display: false },
+        ticks:  {
+          color:    '#94A3B8',
+          font:     { size: 11 },
+          maxTicksLimit: 8,
+          maxRotation: 0,
+        }
+      },
+      y: {
+        grid:   { color: 'rgba(0,0,0,0.04)' },
+        border: { display: false },
+        ticks:  {
+          color:     '#94A3B8',
+          font:      { size: 11 },
+          precision: 0,
+          maxTicksLimit: 4,
+        },
+        min: 0,
+      }
+    }
+  };
+
+  readonly donutData = computed<ChartData<'doughnut'>>(() => {
+    const s = this.statusStats();
+    return {
+      labels: ['À traiter', 'En cours', 'Résolus'],
+      datasets: [{
+        data:            [
+          s.find(x => x.status === 'Todo')?.count       ?? 0,
+          s.find(x => x.status === 'InProgress')?.count ?? 0,
+          s.find(x => x.status === 'Done')?.count       ?? 0,
+        ],
+        backgroundColor: ['#F59E0B', '#8B5CF6', '#16A34A'],
+        borderWidth:     0,
+        hoverOffset:     4,
+      }]
+    };
+  });
+
+  readonly donutOptions: ChartOptions<'doughnut'> = {
+    responsive:          true,
+    maintainAspectRatio: false,
+    cutout:              '72%',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0F0F11',
+        titleColor:      'rgba(255,255,255,0.5)',
+        bodyColor:       '#fff',
+        bodyFont:        { size: 13, weight: 'bold' },
+        padding:         10,
+        displayColors:   true,
+        callbacks: {
+          label: (item) => ` ${item.label} : ${item.raw}`
+        }
+      }
+    }
+  };
+
+
   // ── Empty state ───────────────────────────────────────────────────────────
   // Modifier isEmpty : seulement si aucune donnée du tout (jamais)
   readonly isEmpty = computed(() =>
     !this.loading() && !this.error() &&
-    this.stats().totalFeedbacks === 0 && !this.hasDataInPeriod()
+    !this.data()?.hasAnyFeedbacks
   );
 
   // état "aucune donnée sur la période" (données historiques existent mais pas sur la période)
   readonly isEmptyPeriod = computed(() =>
     !this.loading() && !this.error() &&
-    !this.hasDataInPeriod() && !this.isEmpty()
+    (this.data()?.hasAnyFeedbacks ?? false) &&
+    !(this.data()?.hasDataInPeriod ?? true)
   );
 
   // ─── Sparkline ────────────────────────────────────────────────────────────
@@ -104,6 +218,11 @@ export class Overview implements OnInit, OnDestroy {
 
   // tous les points de la période pour le graphique volume
   readonly trends = computed(() => this.data()?.trends ?? []);
+
+  // QueryParams pour les liens filtrés
+  readonly todoParams    = { status: 'Todo' };
+  readonly urgentParams  = { status: 'Todo', priority: 'High' };
+
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
   ngOnInit():    void { this.load(); }
@@ -186,6 +305,13 @@ export class Overview implements OnInit, OnDestroy {
     return colors[category] ?? '#94A3B8';
   }
 
+  getStatusLabel(status: string): string {
+    const map: Record<string, string> = {
+      Todo: 'À traiter', InProgress: 'En cours', Done: 'Résolus'
+    };
+    return map[status] ?? status;
+  }
+
   getPriorityConfig(priority: string): { label: string; cls: string } {
     const map: Record<string, { label: string; cls: string }> = {
       Critical: { label: 'Critique', cls: 'critical' },
@@ -207,15 +333,33 @@ export class Overview implements OnInit, OnDestroy {
 
   getGrowthLabel(): string {
     const g = this.stats().growthPercent;
-    if (g === 0) return '';
-    return g > 0 ? `+${g}%` : `${g}%`;
+    const prev = this.stats().previousPeriodTotal;
+    const total = this.stats().totalFeedbacks;
+    if (g === null) return prev === 0 && total > 0 ? 'Première activité' : '';
+    if (g === 0) return `${prev} précédemment`;
+    const diff = total - prev;
+    const sign = diff > 0 ? '+' : '';
+    return `${g > 0 ? '+' : ''}${g}% (${sign}${diff} vs ${prev})`;
   }
 
   getGrowthClass(): string {
     const g = this.stats().growthPercent;
+    if (g === null) return 'growth--new';
     if (g > 0) return 'growth--up';
     if (g < 0) return 'growth--down';
     return '';
+  }
+
+  getResolvedDeltaLabel(): string {
+    const d = this.stats().resolvedRateDelta;
+    if (d === null) return '';
+    return d >= 0 ? `↑ +${d} pts` : `↓ ${d} pts`;
+  }
+
+  getResolvedDeltaClass(): string {
+    const d = this.stats().resolvedRateDelta;
+    if (d === null || d === 0) return '';
+    return d > 0 ? 'growth--up' : 'growth--down';
   }
 
   trackByDate(_: number, item: TrendPoint):    string { return item.date; }

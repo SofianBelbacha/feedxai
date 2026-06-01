@@ -148,7 +148,7 @@
       <!-- ══ KPI CARDS ════════════════════════════════════════════════════════ -->
       <section class="kpis" aria-label="Indicateurs clés">
 
-        <!-- Total feedbacks + croissance -->
+        <!-- Total + croissance enrichie -->
         <div class="kpi-card kpi-card--total">
           <div class="kpi-card__icon">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
@@ -159,16 +159,21 @@
           <div class="kpi-card__body">
             <span class="kpi-card__value">{{ stats().totalFeedbacks }}</span>
             <span class="kpi-card__label">Feedbacks reçus</span>
+            @if (stats().averagePerDay > 0) {
+              <span class="kpi-card__sub">{{ stats().averagePerDay }}/jour</span>
+            }
             @if (getGrowthLabel()) {
               <span class="kpi-card__growth" [class]="getGrowthClass()">
-                {{ getGrowthLabel() }} vs période préc.
+                {{ getGrowthLabel() }}
               </span>
             }
           </div>
         </div>
 
-        <!-- Todo -->
-        <a routerLink="/dashboard/feedbacks" class="kpi-card kpi-card--todo">
+        <!-- Todo — lien filtré -->
+        <a routerLink="/dashboard/feedbacks"
+          [queryParams]="todoParams"
+          class="kpi-card kpi-card--todo">
           <div class="kpi-card__icon">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
                 stroke-linecap="round" stroke-linejoin="round">
@@ -187,8 +192,10 @@
           </svg>
         </a>
 
-        <!-- Urgent -->
-        <a routerLink="/dashboard/feedbacks" class="kpi-card kpi-card--urgent">
+        <!-- Urgent — lien filtré -->
+        <a routerLink="/dashboard/feedbacks"
+          [queryParams]="urgentParams"
+          class="kpi-card kpi-card--urgent">
           <div class="kpi-card__icon">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
                 stroke-linecap="round" stroke-linejoin="round">
@@ -207,7 +214,7 @@
           </svg>
         </a>
 
-        <!-- Taux de résolution -->
+        <!-- Taux de résolution + delta -->
         <div class="kpi-card kpi-card--resolved">
           <div class="kpi-card__icon">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
@@ -220,37 +227,51 @@
             <span class="kpi-card__value">{{ stats().resolvedRate }}%</span>
             <span class="kpi-card__label">Résolus</span>
             <span class="kpi-card__sub">{{ stats().resolvedCount }} / {{ stats().totalFeedbacks }}</span>
-          </div>
-          <!-- Sparkline -->
-          <div class="kpi-card__sparkline" aria-hidden="true">
-            @for (point of sparkline7(); track trackByDate($index, point)) {
-              <div class="kpi-card__spark-bar"
-                  [style.height.%]="getSparklineHeight(point.count)"
-                  [title]="point.date + ' : ' + point.count">
-              </div>
+            @if (getResolvedDeltaLabel()) {
+              <span class="kpi-card__growth" [class]="getResolvedDeltaClass()">
+                {{ getResolvedDeltaLabel() }}
+              </span>
             }
           </div>
         </div>
 
       </section>
 
+      <!-- Stats secondaires -->
+      @if (stats().averageResolutionDays !== null || stats().pendingAiCount > 0) {
+        <div class="stats-secondary">
+          @if (stats().averageResolutionDays !== null) {
+            <div class="stat-pill">
+              <span class="stat-pill__value">{{ stats().averageResolutionDays }}j</span>
+              <span class="stat-pill__label">Temps moyen de résolution</span>
+            </div>
+          }
+          @if (stats().pendingAiCount > 0) {
+            <div class="stat-pill stat-pill--warning">
+              <span class="stat-pill__value">{{ stats().pendingAiCount }}</span>
+              <span class="stat-pill__label">En attente d'analyse IA</span>
+            </div>
+          }
+        </div>
+      }
+
       <!-- ══ GRAPHIQUE VOLUME ══════════════════════════════════════════════════════ -->
-      @if (trends().length > 1) {
-        <section class="volume-chart" aria-label="Volume de feedbacks">
+      @if (hasDataInPeriod() && trends().length > 1) {
+        <section class="volume-chart">
           <div class="volume-chart__header">
             <span class="volume-chart__title">Volume sur {{ selectedDays() }} jours</span>
           </div>
-          <div class="volume-chart__bars">
-            @for (point of trends(); track point.date) {
-              <div class="volume-bar"
-                  [style.height.%]="getSparklineHeight(point.count)"
-                  [title]="point.date + ' — ' + point.count + ' feedback(s)'">
-              </div>
-            }
+          <div class="volume-chart__canvas">
+            <canvas baseChart
+                    [data]="chartData()"
+                    [options]="chartOptions"
+                    type="line"
+                    aria-label="Graphique du volume de feedbacks">
+            </canvas>
           </div>
         </section>
-      }
-
+      }      
+      
       <!-- ══ LAYOUT PRINCIPAL ══════════════════════════════════════════════════ -->
       <div class="overview__grid">
 
@@ -280,6 +301,49 @@
                   </li>
                 }
               </ul>
+            </section>
+          }
+
+          @if (autoInsights()?.bullets?.length || autoInsights()?.insights?.length) {
+            <section class="ai-card">
+              <div class="ai-card__header">
+                <div class="ai-card__badge">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M8 2l1.5 4.5L14 8l-4.5 1.5L8 14l-1.5-4.5L2 8l4.5-1.5z"/>
+                  </svg>
+                  Auto
+                </div>
+                <h2 class="ai-card__title">
+                  Synthèse automatique — {{ selectedDays() }} derniers jours
+                </h2>
+              </div>
+
+              @if (autoInsights()!.bullets.length) {
+                <ul class="ai-card__bullets">
+                  @for (bullet of autoInsights()!.bullets; track bullet) {
+                    <li class="ai-card__bullet">
+                      <span class="ai-card__bullet-dot" aria-hidden="true"></span>
+                      {{ bullet }}
+                    </li>
+                  }
+                </ul>
+              }
+
+              <!-- Insights comparatifs — séparés visuellement -->
+              @if (autoInsights()!.insights.length) {
+                <div class="ai-card__insights">
+                  <span class="ai-card__insights-label">Tendances détectées</span>
+                  <ul class="ai-card__bullets">
+                    @for (insight of autoInsights()!.insights; track insight) {
+                      <li class="ai-card__bullet ai-card__bullet--insight">
+                        <span class="ai-card__insight-dot" aria-hidden="true">↗</span>
+                        {{ insight }}
+                      </li>
+                    }
+                  </ul>
+                </div>
+              }
             </section>
           }
 
@@ -368,6 +432,36 @@
 
         <!-- Colonne secondaire -->
         <aside class="overview__aside">
+
+          <!-- ── RÉPARTITION DES STATUTS ────────────────────────────────── -->
+          @if (stats().totalFeedbacks > 0) {
+            <section class="aside-card">
+              <h3 class="aside-card__title">Répartition</h3>
+              <div class="donut-wrapper">
+                <canvas baseChart
+                        [data]="donutData()"
+                        [options]="donutOptions"
+                        type="doughnut"
+                        aria-label="Répartition des statuts">
+                </canvas>
+                <!-- Centre du donut -->
+                <div class="donut-center" aria-hidden="true">
+                  <span class="donut-center__value">{{ stats().resolvedRate }}%</span>
+                  <span class="donut-center__label">résolus</span>
+                </div>
+              </div>
+              <!-- Légende manuelle -->
+              <ul class="donut-legend">
+                @for (s of statusStats(); track s.status) {
+                  <li class="donut-legend__item">
+                    <span class="donut-legend__dot donut-legend__dot--{{ s.status.toLowerCase() }}"></span>
+                    <span class="donut-legend__label">{{ getStatusLabel(s.status) }}</span>
+                    <span class="donut-legend__count">{{ s.count }}</span>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
 
           <!-- ── TENDANCES PAR CATÉGORIE ────────────────────────────────────── -->
           @if (categoryStats().length > 0) {

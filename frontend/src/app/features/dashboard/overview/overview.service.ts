@@ -2,15 +2,17 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { DashboardStats, TrendPoint, RecentFeedback, CategoryStat, ProjectStat, AutoInsights } from './overview.types';
+import { DashboardStats, TrendPoint, RecentFeedback, CategoryStat, ProjectStat, AutoInsights, StatusStat } from './overview.types';
 
 export interface DashboardData {
   stats: DashboardStats;
   trends: TrendPoint[];
   recentFeedbacks: RecentFeedback[];
   categoryStats: CategoryStat[];
+  statusStats: StatusStat[];
   projectStats: ProjectStat[];
-  autoInsights: AutoInsights | null;  
+  autoInsights: AutoInsights | null;
+  hasAnyFeedbacks: boolean;  
   hasDataInPeriod: boolean;           
 }
 

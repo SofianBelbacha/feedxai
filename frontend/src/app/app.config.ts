@@ -1,11 +1,11 @@
 import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter } from '@angular/router';
-
 import { routes } from './app.routes';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { SessionRestoreService } from './core/services/session-restore.service';
 import { quotaInterceptor } from './core/interceptors/quota.interceptor';
+import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -15,6 +15,8 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
           const sessionRestore = inject(SessionRestoreService);
           return sessionRestore.restore();
-        })  
+        }),
+    provideCharts(withDefaultRegisterables())
+
     ]
 };

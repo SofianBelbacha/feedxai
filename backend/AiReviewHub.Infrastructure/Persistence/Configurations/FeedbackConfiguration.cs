@@ -50,6 +50,12 @@ namespace AiReviewHub.Infrastructure.Persistence.Configurations
             builder.Property(f => f.CreatedAt)
                 .IsRequired();
 
+            builder.Property(x => x.UpdatedAt)
+                .IsRequired(false);
+
+            builder.Property(x => x.ResolvedAt)
+                .IsRequired(false);
+
             builder.Property(f => f.PriorityScore)
                 .IsRequired(false);
 
