@@ -1,391 +1,501 @@
-<div class="projects">
+<div class="projects" (click)="closeMenu()">
 
-  <!-- ── En-tête ──────────────────────────────────────────── -->
+  <!-- ══ HEADER ══════════════════════════════════════════════════════════════ -->
   <header class="projects__header">
-    <div>
+    <div class="projects__header-left">
       <h1 class="projects__title">Projets</h1>
       <p class="projects__subtitle">
-        {{ activeProjects().length }} projet{{ activeProjects().length > 1 ? 's' : '' }} actif{{ activeProjects().length
-        > 1 ? 's' : '' }}
-        @if (plan() === 'Free' || plan() === 'Pro') {
-        <span class="projects__limit-badge">
-          Plan {{ plan() }} — {{ projects().length }}/{{ projectLimit() }}
-        </span>
-        } @else {
-        <span class="projects__limit-badge">
-          Plan {{ plan() }} — {{ activeProjects().length }}/ ∞
-        </span>
+        {{ activeProjects().length }} projet{{ activeProjects().length > 1 ? 's' : '' }} actif{{ activeProjects().length > 1 ? 's' : '' }}
+        @if (plan() !== 'Team') {
+          <span class="limit-badge">
+            {{ projects().length }}/{{ projectLimit() }} — Plan {{ plan() }}
+          </span>
         }
       </p>
     </div>
 
-    <button class="projects__create-btn" [disabled]="!canCreateMore()"
-      [title]="!canCreateMore() ? 'Limite de projets atteinte' : ''" (click)="openModal()">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-        stroke-linejoin="round">
-        <line x1="8" y1="2" x2="8" y2="14" />
-        <line x1="2" y1="8" x2="14" y2="8" />
-      </svg>
-      Nouveau projet
+    <div class="projects__header-actions">
+      <button
+        class="btn-ghost-icon"
+        (click)="toggleTrash(); $event.stopPropagation()"
+        [class.btn-ghost-icon--active]="showTrash()"
+        title="Corbeille">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="2 4 14 4"/>
+          <path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/>
+          <rect x="3" y="4" width="10" height="10" rx="1"/>
+          <line x1="6" y1="8" x2="6" y2="11"/>
+          <line x1="10" y1="8" x2="10" y2="11"/>
+        </svg>
+        @if (deletedProjects().length > 0) {
+          <span class="btn-ghost-icon__badge">{{ deletedProjects().length }}</span>
+        }
       </button>
-            <button class="btn btn--ghost btn--icon" (click)="toggleTrash()" title="Corbeille">
-          🗑️
-          @if (deletedProjects().length > 0) {
-          <span class="badge">{{ deletedProjects().length }}</span>
-          }
+
+      <button
+        class="btn-primary"
+        [disabled]="!canCreateMore()"
+        [title]="!canCreateMore() ? 'Limite de projets atteinte pour ce plan' : ''"
+        (click)="openModal(); $event.stopPropagation()">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="2" x2="8" y2="14"/>
+          <line x1="2" y1="8" x2="14" y2="8"/>
+        </svg>
+        Nouveau projet
       </button>
+    </div>
   </header>
 
-  <!-- ── Loading ───────────────────────────────────────────── -->
+  <!-- ══ KPIs ════════════════════════════════════════════════════════════════ -->
+  @if (!loading() && projects().length > 0) {
+    <div class="projects__kpis">
+      <div class="kpi">
+        <span class="kpi__value">{{ activeProjects().length }}</span>
+        <span class="kpi__label">Projets actifs</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi__value">{{ totalFeedbacks() }}</span>
+        <span class="kpi__label">Feedbacks collectés</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi__value">{{ widgetActiveCount() }}</span>
+        <span class="kpi__label">Widgets actifs</span>
+      </div>
+      @if (mostActiveProject()) {
+        <div class="kpi kpi--highlight">
+          <span class="kpi__value kpi__value--sm">{{ mostActiveProject()!.name }}</span>
+          <span class="kpi__label">Projet le plus actif — {{ mostActiveProject()!.feedbackCount }} feedbacks</span>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ══ LOADING ══════════════════════════════════════════════════════════════ -->
   @if (loading()) {
-  <div class="projects__grid">
-    @for (i of [1,2,3]; track i) {
-    <div class="project-skeleton"></div>
-    }
-  </div>
+    <div class="projects__grid">
+      @for (i of [1,2,3]; track i) {
+        <div class="project-skel"></div>
+      }
+    </div>
   }
 
-  <!-- ── Erreur ─────────────────────────────────────────────── -->
+  <!-- ══ ERREUR ═══════════════════════════════════════════════════════════════ -->
   @if (error()) {
-  <div class="projects__error">
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-      stroke-linejoin="round">
-      <circle cx="10" cy="10" r="8" />
-      <line x1="10" y1="6" x2="10" y2="10.5" />
-      <circle cx="10" cy="14" r="0.5" fill="currentColor" />
-    </svg>
-    {{ error() }}
-    <button class="projects__error-retry" (click)="load()">Réessayer</button>
-  </div>
-  }
-
-  <!-- ── État vide ─────────────────────────────────────────── -->
-  @if (!loading() && !error() && projects().length === 0) {
-  <div class="projects__empty">
-    <div class="projects__empty-icon">
-      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-        stroke-linejoin="round">
-        <rect x="6" y="6" width="36" height="36" rx="6" />
-        <line x1="24" y1="16" x2="24" y2="32" />
-        <line x1="16" y1="24" x2="32" y2="24" />
+    <div class="projects__error" role="alert">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+           stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="8" cy="8" r="7"/>
+        <line x1="8" y1="5" x2="8" y2="8.5"/>
+        <circle cx="8" cy="11" r="0.5" fill="currentColor"/>
       </svg>
+      {{ error() }}
+      <button class="projects__error-retry" (click)="load()">Réessayer</button>
     </div>
-    <h2 class="projects__empty-title">Aucun projet pour l'instant</h2>
-    <p class="projects__empty-desc">
-      Créez votre premier projet pour commencer à collecter des feedbacks.
-    </p>
-    <button class="projects__create-btn" (click)="openModal()">
-      Créer mon premier projet
-    </button>
-  </div>
   }
 
-  <!-- ── Grille de projets ──────────────────────────────────── -->
+  <!-- ══ ÉTAT VIDE ════════════════════════════════════════════════════════════ -->
+  @if (!loading() && !error() && projects().length === 0) {
+    <div class="projects__empty">
+      <div class="projects__empty-icon">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <rect x="6" y="10" width="36" height="30" rx="4"/>
+          <path d="M16 10V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/>
+          <line x1="24" y1="20" x2="24" y2="30"/>
+          <line x1="19" y1="25" x2="29" y2="25"/>
+        </svg>
+      </div>
+      <h2 class="projects__empty-title">Aucun projet pour l'instant</h2>
+      <p class="projects__empty-desc">
+        Créez votre premier projet pour commencer à collecter des feedbacks via le widget.
+      </p>
+      <button class="btn-primary" (click)="openModal()">
+        Créer mon premier projet
+      </button>
+    </div>
+  }
+
+  <!-- ══ GRILLE DE PROJETS ════════════════════════════════════════════════════ -->
   @if (!loading() && !error() && projects().length > 0) {
-  <div class="projects__grid">
+    <div class="projects__grid">
+      @for (project of projects(); track trackById($index, project)) {
 
-    @for (project of projects(); track trackById($index, project)) {
-    <article class="project-card" [class.project-card--inactive]="!project.isActive" (click)="openFeedbacks(project)">
-
-      <!-- Avatar couleur -->
-      <div class="project-card__avatar" [style.background]="getProjectColor(project.id)">
-        {{ getInitials(project.name) }}
-      </div>
-
-      <!-- Infos -->
-      <div class="project-card__body">
-        <h2 class="project-card__name">{{ project.name }}</h2>
-
-        @if (project.description) {
-        <p class="project-card__desc">{{ project.description }}</p>
-        }
-
-        <div class="project-card__stats">
-          <span class="project-card__stat">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-              stroke-linejoin="round">
-              <path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H5l-3 3V3z" />
-            </svg>
-            {{ project.feedbackCount }} feedback{{ project.feedbackCount > 1 ? 's' : '' }}
-          </span>
-
-          @if (!project.isActive) {
-          <span class="project-card__inactive-badge">Inactif</span>
-          }
-        </div>
-      </div>
-
-      <!-- Actions -->
-      <div class="project-card__actions" (click)="$event.stopPropagation()">
-
-        <!-- Copier le token widget -->
-        <button class="project-card__action" [class.project-card__action--copied]="copiedToken() === project.id"
-          [title]="copiedToken() === project.id ? 'Copié !' : 'Copier le lien widget'" (click)="copyToken(project)">
-          @if (copiedToken() === project.id) {
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-            stroke-linejoin="round">
-            <polyline points="2 8 6 12 14 4" />
-          </svg>
-          } @else {
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-            stroke-linejoin="round">
-            <rect x="5" y="5" width="9" height="9" rx="1.5" />
-            <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" />
-          </svg>
-          }
-        </button>
-
-        <!-- Voir les feedbacks -->
-        <button class="project-card__action project-card__action--primary" title="Voir les feedbacks"
+        <article
+          class="project-card"
+          [class.project-card--inactive]="!project.isActive"
           (click)="openFeedbacks(project)">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-            stroke-linejoin="round">
-            <line x1="3" y1="8" x2="13" y2="8" />
-            <polyline points="9 4 13 8 9 12" />
+
+          <!-- Top : avatar + menu -->
+          <div class="project-card__top">
+            <div class="project-card__avatar" [style.background]="getProjectColor(project.id)">
+              {{ getInitials(project.name) }}
+            </div>
+
+            <!-- Menu contextuel ⋮ -->
+            <div class="project-card__menu-wrap" (click)="$event.stopPropagation()">
+              <button
+                class="menu-trigger"
+                [class.menu-trigger--active]="openMenuId() === project.id"
+                (click)="toggleMenu(project.id, $event)"
+                title="Options">
+                <svg viewBox="0 0 16 16" fill="currentColor">
+                  <circle cx="8" cy="3" r="1.2"/>
+                  <circle cx="8" cy="8" r="1.2"/>
+                  <circle cx="8" cy="13" r="1.2"/>
+                </svg>
+              </button>
+
+              @if (openMenuId() === project.id) {
+                <div class="project-menu" role="menu">
+                  <button class="project-menu__item" (click)="copyToken(project, $event)">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+                         stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="5" y="5" width="9" height="9" rx="1.5"/>
+                      <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/>
+                    </svg>
+                    Copier le widget
+                  </button>
+                  <button class="project-menu__item" (click)="openEditModal(project, $event)">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+                         stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M11 2l3 3-8 8H3v-3l8-8z"/>
+                    </svg>
+                    Modifier
+                  </button>
+                  <button class="project-menu__item" (click)="openDeleteModal(project, $event)">
+                    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="1" y1="1" x2="13" y2="13"/>
+                      <line x1="13" y1="1" x2="1" y2="13"/>
+                    </svg>
+                    Supprimer
+                  </button>
+                  <button class="project-menu__item" (click)="openRegenerateModal(project, $event)">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+                         stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M2 8a6 6 0 1 1 1.5 4"/>
+                      <polyline points="2 13 2 8 7 8"/>
+                    </svg>
+                    Régénérer le token
+                  </button>
+                  <div class="project-menu__separator"></div>
+                  <button class="project-menu__item project-menu__item--danger"
+                          (click)="openDeleteModal(project, $event)">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+                         stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="2 4 14 4"/>
+                      <path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/>
+                      <rect x="3" y="4" width="10" height="10" rx="1"/>
+                    </svg>
+                    Supprimer
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Body : nom + description -->
+          <div class="project-card__body">
+            <h2 class="project-card__name">{{ project.name }}</h2>
+            @if (project.description) {
+              <p class="project-card__desc">{{ project.description }}</p>
+            }
+          </div>
+
+          <!-- Stats + indicateurs -->
+          <div class="project-card__footer">
+            <div class="project-card__feedback-count">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H5l-3 3V3z"/>
+              </svg>
+              <strong>{{ project.feedbackCount }}</strong>
+              feedback{{ project.feedbackCount > 1 ? 's' : '' }}
+            </div>
+
+            <div class="project-card__badges">
+              <!-- Indicateur widget actif/inactif -->
+              @if (project.feedbackCount > 0) {
+                <span class="badge badge--active" title="Widget actif">
+                  <span class="badge__dot"></span>
+                  Widget actif
+                </span>
+              } @else {
+                <span class="badge badge--idle" title="Aucun feedback reçu">
+                  Aucun feedback
+                </span>
+              }
+            </div>
+          </div>
+
+          <!-- Date + lien feedbacks -->
+          <div class="project-card__meta">
+            <span class="project-card__date">Créé le {{ formatDate(project.createdAt) }}</span>
+            <button
+              class="project-card__cta"
+              (click)="openFeedbacks(project); $event.stopPropagation()">
+              Voir les feedbacks
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <line x1="2" y1="6" x2="10" y2="6"/>
+                <polyline points="7 3 10 6 7 9"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Badge copié -->
+          @if (copiedToken() === project.id) {
+            <div class="project-card__copied">
+              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="2 7 5 10 12 3"/>
+              </svg>
+              Snippet copié !
+            </div>
+          }
+
+        </article>
+      }
+    </div>
+  }
+
+  <!-- ══ CORBEILLE ════════════════════════════════════════════════════════════ -->
+  @if (showTrash()) {
+    <section class="trash">
+      <div class="trash__header">
+        <h3 class="trash__title">Corbeille</h3>
+        <span class="trash__subtitle">Suppression définitive après 30 jours</span>
+      </div>
+
+      @if (loadingTrash()) {
+        <div class="trash__loading">
+          <div class="project-skel project-skel--sm"></div>
+          <div class="project-skel project-skel--sm"></div>
+        </div>
+      } @else if (deletedProjects().length === 0) {
+        <p class="trash__empty">La corbeille est vide.</p>
+      } @else {
+        <ul class="trash__list">
+          @for (project of deletedProjects(); track project.id) {
+            <li class="trash-item">
+              <div class="trash-item__info">
+                <span class="trash-item__name">{{ project.name }}</span>
+                <span
+                  class="trash-item__countdown"
+                  [class.trash-item__countdown--urgent]="project.daysUntilPurge <= 7">
+                  Suppression dans {{ project.daysUntilPurge }} jour{{ project.daysUntilPurge > 1 ? 's' : '' }}
+                </span>
+              </div>
+              <button
+                class="btn-restore"
+                (click)="onRestore(project)"
+                [disabled]="restoringId() === project.id">
+                {{ restoringId() === project.id ? 'Restauration…' : 'Restaurer' }}
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+
+  <!-- ══ UPGRADE BANNER ═══════════════════════════════════════════════════════ -->
+  @if (plan() === 'Free' && projects().length >= 1) {
+    <div class="upgrade-banner">
+      <div class="upgrade-banner__text">
+        <strong>Passez à Pro</strong> — jusqu'à 10 projets et 2 000 feedbacks/mois.
+      </div>
+      <a routerLink="/dashboard/billing" class="upgrade-banner__btn">
+        Voir les plans →
+      </a>
+    </div>
+  }
+
+</div>
+
+<!-- ══ MODALS ═══════════════════════════════════════════════════════════════ -->
+
+<!-- Création -->
+@if (showModal()) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="modal__header">
+        <h2 class="modal__title">Nouveau projet</h2>
+        <button class="modal__close" (click)="closeModal()" aria-label="Fermer">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <line x1="1" y1="1" x2="13" y2="13"/>
+            <line x1="13" y1="1" x2="1" y2="13"/>
           </svg>
         </button>
-
-        <button class="btn btn--icon" title="Modifier le projet"
-          (click)="openEditModal(project); $event.stopPropagation()">
-          ✏️
-        </button>
-
-        <button class="btn btn--icon btn--danger" title="Supprimer le projet"
-          (click)="openDeleteModal(project); $event.stopPropagation()">
-          🗑️
-        </button>
-
-
       </div>
-
-
-    </article>
-    }
-
-  </div>
-  }
-
-  @if (showTrash()) {
-  <section class="trash-section">
-    <h3 class="trash-section__title">
-      Corbeille
-      <span class="trash-section__subtitle">
-        Les projets sont supprimés définitivement après 30 jours
-      </span>
-    </h3>
-
-    @if (loadingTrash()) {
-    <p class="loading">Chargement...</p>
-    } @else if (deletedProjects().length === 0) {
-    <p class="empty-state">La corbeille est vide.</p>
-    } @else {
-    <ul class="trash-list">
-      @for (project of deletedProjects(); track project.id) {
-      <li class="trash-item">
-        <div class="trash-item__info">
-          <span class="trash-item__name">{{ project.name }}</span>
-          <span class="trash-item__countdown" [class.trash-item__countdown--urgent]="project.daysUntilPurge <= 7">
-            Suppression définitive dans {{ project.daysUntilPurge }} jour(s)
-          </span>
+      <div class="modal__body">
+        <div class="field">
+          <label class="field__label" for="proj-name">
+            Nom <span class="field__required">*</span>
+          </label>
+          <input id="proj-name" class="field__input" type="text"
+                 placeholder="Ex : Refonte site e-commerce"
+                 maxlength="100" autofocus
+                 [ngModel]="newName()" (ngModelChange)="newName.set($event)"/>
+          <span class="field__counter">{{ newName().length }}/100</span>
         </div>
-        <button class="btn btn--ghost btn--sm" (click)="onRestore(project)" [disabled]="restoringId() === project.id">
-          {{ restoringId() === project.id ? 'Restauration...' : 'Restaurer' }}
-        </button>
-      </li>
-      }
-    </ul>
-    }
-  </section>
-  }
-
-  <!-- ── Upgrade banner pour Free ──────────────────────────── -->
-  @if (plan() === 'Free' && projects().length >= 1) {
-  <div class="projects__upgrade">
-    <div class="projects__upgrade-text">
-      <strong>Passez à Pro</strong> pour gérer jusqu'à 10 projets et des feedbacks illimités.
-    </div>
-    <a href="/pricing" class="projects__upgrade-btn">
-      Voir les plans →
-    </a>
-  </div>
-  }
-
-</div>
-
-<!-- ── Modal création ─────────────────────────────────────── -->
-@if (showModal()) {
-<div class="modal-overlay" (click)="closeModal()">
-  <div class="modal" (click)="$event.stopPropagation()">
-
-    <div class="modal__header">
-      <h2 class="modal__title">Nouveau projet</h2>
-      <button class="modal__close" (click)="closeModal()">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round">
-          <line x1="2" y1="2" x2="14" y2="14" />
-          <line x1="14" y1="2" x2="2" y2="14" />
-        </svg>
-      </button>
-    </div>
-
-    <div class="modal__body">
-
-      <div class="modal-field">
-        <label class="modal-field__label" for="proj-name">
-          Nom du projet <span class="modal-field__required">*</span>
-        </label>
-        <input id="proj-name" class="modal-field__input" type="text" placeholder="Ex : Refonte site e-commerce"
-          maxlength="100" [ngModel]="newName()" (ngModelChange)="newName.set($event)" autofocus>
-        <span class="modal-field__counter">
-          {{ newName().length }}/100
-        </span>
-      </div>
-
-      <div class="modal-field">
-        <label class="modal-field__label" for="proj-desc">
-          Description
-          <span class="modal-field__optional">(optionnel)</span>
-        </label>
-        <textarea id="proj-desc" class="modal-field__textarea" placeholder="Décrivez brièvement ce projet…"
-          maxlength="500" rows="3" [ngModel]="newDescription()" (ngModelChange)="newDescription.set($event)">
+        <div class="field">
+          <label class="field__label" for="proj-desc">
+            Description <span class="field__optional">(optionnel)</span>
+          </label>
+          <textarea id="proj-desc" class="field__textarea" rows="3"
+                    placeholder="Décrivez brièvement ce projet…"
+                    maxlength="500"
+                    [ngModel]="newDescription()" (ngModelChange)="newDescription.set($event)">
           </textarea>
-        <span class="modal-field__counter">
-          {{ newDescription().length }}/500
-        </span>
-      </div>
-
-      @if (createError()) {
-      <p class="modal__error">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-          stroke-linejoin="round">
-          <circle cx="8" cy="8" r="7" />
-          <line x1="8" y1="5" x2="8" y2="8.5" />
-          <circle cx="8" cy="11" r="0.5" fill="currentColor" />
-        </svg>
-        {{ createError() }}
-      </p>
-      }
-
-    </div>
-
-    <div class="modal__footer">
-      <button class="modal__cancel" (click)="closeModal()">
-        Annuler
-      </button>
-      <button class="modal__submit" [disabled]="creating() || !newName().trim()" (click)="onCreate()">
-        @if (creating()) {
-        <span class="modal__spinner"></span>
-        Création…
-        } @else {
-        Créer le projet
+          <span class="field__counter">{{ newDescription().length }}/500</span>
+        </div>
+        @if (createError()) {
+          <p class="modal__error">{{ createError() }}</p>
         }
-      </button>
+      </div>
+      <div class="modal__footer">
+        <button class="btn-cancel" (click)="closeModal()">Annuler</button>
+        <button class="btn-primary" [disabled]="creating() || !newName().trim()" (click)="onCreate()">
+          @if (creating()) { <span class="spinner"></span> Création… }
+          @else { Créer le projet }
+        </button>
+      </div>
     </div>
-
   </div>
-</div>
 }
 
+<!-- Snippet manuel -->
 @if (showSnippetModal()) {
-<div class="modal-overlay" (click)="closeSnippetModal()">
-  <div class="modal" (click)="$event.stopPropagation()">
-
-    <div class="modal__header">
-      <h2 class="modal__title">Snippet d'intégration</h2>
-      <button class="modal__close" (click)="closeSnippetModal()">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round">
-          <line x1="2" y1="2" x2="14" y2="14" />
-          <line x1="14" y1="2" x2="2" y2="14" />
-        </svg>
-      </button>
+  <div class="modal-overlay" (click)="closeSnippetModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <h2 class="modal__title">Snippet d'intégration</h2>
+        <button class="modal__close" (click)="closeSnippetModal()">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <line x1="1" y1="1" x2="13" y2="13"/>
+            <line x1="13" y1="1" x2="1" y2="13"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal__body">
+        <p class="modal__hint">Copie automatique indisponible. Sélectionnez et copiez manuellement.</p>
+        <pre class="modal__snippet"><code>{{ snippetToCopy() }}</code></pre>
+      </div>
+      <div class="modal__footer">
+        <button class="btn-primary" (click)="closeSnippetModal()">Fermer</button>
+      </div>
     </div>
-
-    <div class="modal__body">
-      <p class="modal__hint">
-        La copie automatique n'est pas disponible sur ce navigateur.
-        Sélectionnez et copiez le code ci-dessous manuellement.
-      </p>
-      <pre class="modal__snippet"><code>{{ snippetToCopy() }}</code></pre>
-    </div>
-
-    <div class="modal__footer">
-      <button class="modal__cancel" (click)="closeSnippetModal()">Fermer</button>
-    </div>
-
   </div>
-</div>
 }
 
+<!-- Édition -->
 @if (showEditModal()) {
-<div class="modal-backdrop" (click)="closeEditModal()">
-  <div class="modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true"
-    aria-labelledby="edit-modal-title">
-
-    <h2 id="edit-modal-title" class="modal__title">Modifier le projet</h2>
-
-    <div class="form-group">
-      <label for="edit-name">Nom <span class="required">*</span></label>
-      <input id="edit-name" type="text" class="input" [value]="editName()"
-        (input)="editName.set($any($event.target).value)" maxlength="100" placeholder="Nom du projet" />
-      <span class="char-count">{{ editName().length }}/100</span>
+  <div class="modal-overlay" (click)="closeEditModal()">
+    <div class="modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="modal__header">
+        <h2 class="modal__title">Modifier le projet</h2>
+        <button class="modal__close" (click)="closeEditModal()">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <line x1="1" y1="1" x2="13" y2="13"/>
+            <line x1="13" y1="1" x2="1" y2="13"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal__body">
+        <div class="field">
+          <label class="field__label" for="edit-name">Nom <span class="field__required">*</span></label>
+          <input id="edit-name" class="field__input" type="text" maxlength="100"
+                 [value]="editName()" (input)="editName.set($any($event.target).value)"/>
+          <span class="field__counter">{{ editName().length }}/100</span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="edit-desc">Description <span class="field__optional">(optionnel)</span></label>
+          <textarea id="edit-desc" class="field__textarea" rows="3" maxlength="500"
+                    [value]="editDescription()"
+                    (input)="editDescription.set($any($event.target).value)">
+          </textarea>
+          <span class="field__counter">{{ editDescription().length }}/500</span>
+        </div>
+        @if (editError()) { <p class="modal__error">{{ editError() }}</p> }
+      </div>
+      <div class="modal__footer">
+        <button class="btn-cancel" (click)="closeEditModal()">Annuler</button>
+        <button class="btn-primary" [disabled]="saving()" (click)="onSaveEdit()">
+          @if (saving()) { <span class="spinner"></span> Sauvegarde… }
+          @else { Sauvegarder }
+        </button>
+      </div>
     </div>
-
-    <div class="form-group">
-      <label for="edit-description">Description</label>
-      <textarea id="edit-description" class="input input--textarea" [value]="editDescription()"
-        (input)="editDescription.set($any($event.target).value)" maxlength="500" rows="3"
-        placeholder="Description (optionnelle)">
-        </textarea>
-      <span class="char-count">{{ editDescription().length }}/500</span>
-    </div>
-
-    @if (editError()) {
-    <p class="form-error">{{ editError() }}</p>
-    }
-
-    <div class="modal__actions">
-      <button class="btn btn--primary" (click)="onSaveEdit()" [disabled]="saving()">
-        {{ saving() ? 'Sauvegarde...' : 'Sauvegarder' }}
-      </button>
-      <button class="btn btn--ghost" (click)="closeEditModal()">
-        Annuler
-      </button>
-    </div>
-
   </div>
-</div>
 }
 
+<!-- Suppression -->
 @if (showDeleteModal()) {
-<div class="modal-backdrop" (click)="closeDeleteModal()">
-  <div class="modal modal--danger" (click)="$event.stopPropagation()" role="dialog" aria-modal="true"
-    aria-labelledby="delete-modal-title">
-
-    <div class="modal__icon">⚠️</div>
-
-    <h2 id="delete-modal-title" class="modal__title">
-      Supprimer « {{ deletingProject()?.name }} » ?
-    </h2>
-
-    <p class="modal__body">
-      Cette action est irréversible. Le projet sera désactivé
-      et ses feedbacks ne seront plus accessibles via le widget.
-    </p>
-
-    @if (deleteError()) {
-    <p class="form-error">{{ deleteError() }}</p>
-    }
-
-    <div class="modal__actions">
-      <button class="btn btn--danger" (click)="onConfirmDelete()" [disabled]="deleting()">
-        {{ deleting() ? 'Suppression...' : 'Supprimer définitivement' }}
-      </button>
-      <button class="btn btn--ghost" (click)="closeDeleteModal()">
-        Annuler
-      </button>
+  <div class="modal-overlay" (click)="closeDeleteModal()">
+    <div class="modal modal--danger" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="modal__header">
+        <h2 class="modal__title">Supprimer ce projet ?</h2>
+        <button class="modal__close" (click)="closeDeleteModal()">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <line x1="1" y1="1" x2="13" y2="13"/>
+            <line x1="13" y1="1" x2="1" y2="13"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal__body">
+        <p class="modal__desc">
+          <strong>« {{ deletingProject()?.name }} »</strong> sera déplacé en corbeille.
+          Vous aurez 30 jours pour le restaurer avant suppression définitive.
+        </p>
+        @if (deleteError()) { <p class="modal__error">{{ deleteError() }}</p> }
+      </div>
+      <div class="modal__footer">
+        <button class="btn-cancel" (click)="closeDeleteModal()">Annuler</button>
+        <button class="btn-danger" [disabled]="deleting()" (click)="onConfirmDelete()">
+          @if (deleting()) { <span class="spinner"></span> Suppression… }
+          @else { Supprimer }
+        </button>
+      </div>
     </div>
-
   </div>
-</div>
+}
+
+<!-- Régénération token -->
+@if (showRegenerateModal()) {
+  <div class="modal-overlay" (click)="closeRegenerateModal()">
+    <div class="modal modal--warning" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="modal__header">
+        <h2 class="modal__title">Régénérer le token ?</h2>
+        <button class="modal__close" (click)="closeRegenerateModal()">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <line x1="1" y1="1" x2="13" y2="13"/>
+            <line x1="13" y1="1" x2="1" y2="13"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal__body">
+        <p class="modal__desc">
+          Le widget actuel de <strong>« {{ regeneratingProject()?.name }} »</strong>
+          cessera <strong>immédiatement</strong> de fonctionner.
+          Vous devrez mettre à jour le snippet sur votre site.
+        </p>
+        @if (regenerateError()) { <p class="modal__error">{{ regenerateError() }}</p> }
+      </div>
+      <div class="modal__footer">
+        <button class="btn-cancel" (click)="closeRegenerateModal()">Annuler</button>
+        <button class="btn-warning" [disabled]="regenerating()" (click)="onConfirmRegenerate()">
+          @if (regenerating()) { <span class="spinner"></span> Régénération… }
+          @else { Régénérer le token }
+        </button>
+      </div>
+    </div>
+  </div>
 }
