@@ -1,9 +1,12 @@
 import {
-  Component, OnInit, OnDestroy, inject, signal, computed,
-  effect, Injector
+  Component, OnInit, OnDestroy, inject, signal, computed, effect, Injector
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
+import {
+  CdkDragDrop, CdkDrag, CdkDropList,
+  CdkDropListGroup, moveItemInArray, transferArrayItem
+} from '@angular/cdk/drag-drop';
 import {
   Subject, debounceTime, distinctUntilChanged,
   interval, switchMap, takeWhile, Subscription
@@ -11,7 +14,7 @@ import {
 import { FeedbacksService } from './feedbacks.service';
 import {
   Feedback, FeedbackCategory, FeedbackFilters,
-  FeedbackPriority, FeedbackStatus
+  FeedbackPriority, FeedbackStatus, SortBy
 } from './feedbacks.types';
 import { UserService } from '../../../core/services/user.service';
 import { DashboardContextService } from '../../../core/services/dashboard-context.service';
@@ -19,7 +22,10 @@ import { FeedbackDrawer } from '../../../shared/components/feedback-drawer/feedb
 
 @Component({
   selector: 'app-feedbacks',
-  imports: [CommonModule, FormsModule, DatePipe, FeedbackDrawer],
+  imports: [
+    CommonModule, DatePipe, FeedbackDrawer,
+    CdkDrag, CdkDropList, CdkDropListGroup
+  ],
   templateUrl: './feedbacks.html',
   styleUrl: './feedbacks.scss',
 })
@@ -28,6 +34,8 @@ export class Feedbacks implements OnInit, OnDestroy {
   private readonly injector = inject(Injector);
   private readonly userService = inject(UserService);
   private readonly dashboardContext = inject(DashboardContextService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly search$ = new Subject<string>();
   private pollSub?: Subscription;
 
@@ -38,8 +46,12 @@ export class Feedbacks implements OnInit, OnDestroy {
   error = signal('');
   feedbacks = signal<Feedback[]>([]);
   totalCount = signal(0);
-  dragging = signal<Feedback | null>(null);
   exporting = signal(false);
+
+  // Vues filtrées pour le kanban — mutable pour CDK
+  todoList = signal<Feedback[]>([]);
+  inProgressList = signal<Feedback[]>([]);
+  doneList = signal<Feedback[]>([]);
 
   // ─── Drawer ───────────────────────────────────────────────────────────────
   selectedFeedback = signal<Feedback | null>(null);
@@ -47,72 +59,96 @@ export class Feedbacks implements OnInit, OnDestroy {
 
   // ─── Filtres ──────────────────────────────────────────────────────────────
   searchValue = signal('');
+  statusFilter = signal<FeedbackStatus | ''>('');
   categoryFilter = signal<FeedbackCategory | ''>('');
   priorityFilter = signal<FeedbackPriority | ''>('');
+  sortBy = signal<SortBy>('recent');
+  // Filtres IA avancés
+  filterAction = signal(false);
+  filterSentiment = signal<string>('');
+  filterMinScore = signal<number | null>(null);
+  showAiFilters = signal(false);
+  // Vue critiques
+  criticalMode = signal(false);
   currentPage = signal(1);
   readonly pageSize = 50;
 
-  // ─── Colonnes kanban ──────────────────────────────────────────────────────
   readonly columns: { status: FeedbackStatus; label: string; color: string }[] = [
     { status: 'Todo', label: 'À traiter', color: 'amber' },
     { status: 'InProgress', label: 'En cours', color: 'violet' },
     { status: 'Done', label: 'Résolus', color: 'emerald' },
   ];
 
-  readonly todoFeedbacks = computed(() => this.feedbacks().filter(f => f.status === 'Todo'));
-  readonly inProgressFeedbacks = computed(() => this.feedbacks().filter(f => f.status === 'InProgress'));
-  readonly doneFeedbacks = computed(() => this.feedbacks().filter(f => f.status === 'Done'));
+  // Computed counts
+  readonly criticalCount = computed(() =>
+    this.feedbacks().filter(f =>
+      (f.priorityScore ?? 0) > 80 || f.actionRequired || f.sentiment === 'Frustrated'
+    ).length
+  );
 
   readonly hasActiveFilters = computed(() =>
-    !!this.searchValue() || !!this.categoryFilter() || !!this.priorityFilter()
+    !!this.searchValue() || !!this.statusFilter() || !!this.categoryFilter() ||
+    !!this.priorityFilter() || this.sortBy() !== 'recent' ||
+    this.filterAction() || !!this.filterSentiment() || this.filterMinScore() !== null ||
+    this.criticalMode()
   );
 
   readonly categories: FeedbackCategory[] = ['Bug', 'FeatureRequest', 'Question', 'Uncategorized'];
   readonly priorities: FeedbackPriority[] = ['Critical', 'High', 'Normal', 'Low'];
+  readonly sortOptions: { value: SortBy; label: string }[] = [
+    { value: 'recent', label: 'Plus récents' },
+    { value: 'oldest', label: 'Plus anciens' },
+    { value: 'priority', label: 'Priorité' },
+    { value: 'score', label: 'Score IA' },
+    { value: 'action', label: 'Action requise' },
+  ];
+  readonly sentimentOptions = ['Frustrated', 'Negative', 'Neutral', 'Positive'];
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
   ngOnInit(): void {
-    // effect() déclaré dans ngOnInit avec { injector } — compatible Angular 18/19.
-    // Dans le constructor, le contexte d'injection n'est plus garanti pour effect()
-    // depuis Angular 18, ce qui génère une erreur en mode strict.
+    // Restaurer les filtres depuis l'URL
+    this.route.queryParams.subscribe(params => {
+      if (params['status']) this.statusFilter.set(params['status']);
+      if (params['priority']) this.priorityFilter.set(params['priority']);
+      if (params['category']) this.categoryFilter.set(params['category']);
+      if (params['sort']) this.sortBy.set(params['sort']);
+      if (params['critical']) this.criticalMode.set(params['critical'] === 'true');
+    });
+
     effect(() => {
       const project = this.dashboardContext.selectedProject();
-
       if (!project?.id) {
-        this.feedbacks.set([]);
-        this.totalCount.set(0);
-        this.loading.set(false);
+        this.feedbacks.set([]); this.totalCount.set(0); this.loading.set(false);
         return;
       }
-
       this.currentPage.set(1);
       this.load();
     }, { injector: this.injector });
 
-    this.search$.pipe(
-      debounceTime(300),
-      distinctUntilChanged()
-    ).subscribe(() => {
-      this.currentPage.set(1);
-      this.load();
-    });
+    this.search$.pipe(debounceTime(300), distinctUntilChanged())
+      .subscribe(() => { this.currentPage.set(1); this.load(); });
   }
 
-  ngOnDestroy(): void {
-    this.pollSub?.unsubscribe();
-    this.search$.complete();
+  ngOnDestroy(): void { this.pollSub?.unsubscribe(); this.search$.complete(); }
+
+  // ─── URL params ───────────────────────────────────────────────────────────
+  private syncUrl(): void {
+    const params: Record<string, string> = {};
+    if (this.statusFilter()) params['status'] = this.statusFilter()!;
+    if (this.priorityFilter()) params['priority'] = this.priorityFilter()!;
+    if (this.categoryFilter()) params['category'] = this.categoryFilter()!;
+    if (this.sortBy() !== 'recent') params['sort'] = this.sortBy();
+    if (this.criticalMode()) params['critical'] = 'true';
+
+    this.router.navigate([], { queryParams: params, replaceUrl: true });
   }
 
   // ─── Chargement ───────────────────────────────────────────────────────────
-  get projectId(): string {
-    return this.dashboardContext.selectedProject()?.id ?? '';
-  }
+  get projectId(): string { return this.dashboardContext.selectedProject()?.id ?? ''; }
 
   load(): void {
     if (!this.projectId) {
-      this.feedbacks.set([]);
-      this.totalCount.set(0);
-      this.loading.set(false);
+      this.feedbacks.set([]); this.totalCount.set(0); this.loading.set(false);
       this.error.set('Aucun projet sélectionné.');
       return;
     }
@@ -124,14 +160,27 @@ export class Feedbacks implements OnInit, OnDestroy {
       search: this.searchValue(),
       category: this.categoryFilter() || undefined,
       priority: this.priorityFilter() || undefined,
+      status: this.statusFilter() || undefined,
+      sortBy: this.sortBy(),
       page: this.currentPage(),
       pageSize: this.pageSize,
     };
+
+    // Mode critiques — override les filtres IA
+    if (this.criticalMode()) {
+      filters.minScore = 80;
+      filters.actionRequired = undefined; // on laisse le score gérer
+    } else {
+      if (this.filterAction()) filters.actionRequired = true;
+      if (this.filterSentiment()) filters.sentiment = this.filterSentiment();
+      if (this.filterMinScore() !== null) filters.minScore = this.filterMinScore()!;
+    }
 
     this.service.getAll(this.projectId, filters).subscribe({
       next: (result) => {
         this.feedbacks.set(result.data);
         this.totalCount.set(result.meta.total);
+        this.updateKanbanLists(result.data);
         this.loading.set(false);
         this.startPollingIfNeeded();
       },
@@ -142,35 +191,43 @@ export class Feedbacks implements OnInit, OnDestroy {
     });
   }
 
-  // ─── Polling IA ───────────────────────────────────────────────────────────
+  private updateKanbanLists(feedbacks: Feedback[]): void {
+    this.todoList.set(feedbacks.filter(f => f.status === 'Todo'));
+    this.inProgressList.set(feedbacks.filter(f => f.status === 'InProgress'));
+    this.doneList.set(feedbacks.filter(f => f.status === 'Done'));
+  }
+
+  // ─── Polling IA avec MAX_POLLS ────────────────────────────────────────────
   private startPollingIfNeeded(): void {
     const hasPending = this.feedbacks().some(
       f => f.aiAnalysisStatus === 'Pending' || f.aiAnalysisStatus === 'Processing'
     );
-
     if (!hasPending || this.pollSub) return;
 
+    let pollCount = 0;
+    const MAX_POLLS = 40;
     const filters: FeedbackFilters = {
-      search: this.searchValue(),
-      category: this.categoryFilter() || undefined,
-      priority: this.priorityFilter() || undefined,
-      page: this.currentPage(),
-      pageSize: this.pageSize,
+      search: this.searchValue(), category: this.categoryFilter() || undefined,
+      priority: this.priorityFilter() || undefined, status: this.statusFilter() || undefined,
+      sortBy: this.sortBy(), page: this.currentPage(), pageSize: this.pageSize,
     };
 
     this.pollSub = interval(3000).pipe(
       switchMap(() => this.service.getAll(this.projectId, filters)),
-      takeWhile(result =>
-        result.data.some(
+      takeWhile(result => {
+        pollCount++;
+        return result.data.some(
           f => f.aiAnalysisStatus === 'Pending' || f.aiAnalysisStatus === 'Processing'
-        ), true)
+        ) && pollCount < MAX_POLLS;
+      }, true)
     ).subscribe({
       next: (result) => {
         this.feedbacks.set(result.data);
+        this.updateKanbanLists(result.data);
         const stillPending = result.data.some(
           f => f.aiAnalysisStatus === 'Pending' || f.aiAnalysisStatus === 'Processing'
         );
-        if (!stillPending) {
+        if (!stillPending || pollCount >= MAX_POLLS) {
           this.pollSub?.unsubscribe();
           this.pollSub = undefined;
         }
@@ -178,56 +235,110 @@ export class Feedbacks implements OnInit, OnDestroy {
     });
   }
 
-  // ─── Filtres ──────────────────────────────────────────────────────────────
-  onSearch(value: string): void {
-    this.searchValue.set(value);
-    this.search$.next(value);
-  }
+  // ─── CDK Drag & Drop ──────────────────────────────────────────────────────
+  onDrop(event: CdkDragDrop<Feedback[]>, targetStatus: FeedbackStatus): void {
+    if (event.previousContainer === event.container) {
+      moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+      return;
+    }
 
-  onCategoryChange(value: string): void {
-    this.categoryFilter.set(value as FeedbackCategory | '');
-    this.currentPage.set(1);
-    this.load();
-  }
+    const fb = event.previousContainer.data[event.previousIndex];
+    const prevStatus = fb.status;
 
-  onPriorityChange(value: string): void {
-    this.priorityFilter.set(value as FeedbackPriority | '');
-    this.currentPage.set(1);
-    this.load();
-  }
+    // Mise à jour optimiste
+    transferArrayItem(
+      event.previousContainer.data,
+      event.container.data,
+      event.previousIndex,
+      event.currentIndex
+    );
 
-  clearFilters(): void {
-    this.searchValue.set('');
-    this.categoryFilter.set('');
-    this.priorityFilter.set('');
-    this.currentPage.set(1);
-    this.load();
-  }
+    // Sync signal feedbacks global
+    this.feedbacks.update(list =>
+      list.map(f => f.id === fb.id ? { ...f, status: targetStatus } : f)
+    );
 
-  // ─── Drag & Drop ──────────────────────────────────────────────────────────
-  onDragStart(feedback: Feedback): void { this.dragging.set(feedback); }
-  onDragEnd(): void { this.dragging.set(null); }
-
-  onDrop(status: FeedbackStatus): void {
-    const fb = this.dragging();
-    if (!fb || fb.status === status) { this.dragging.set(null); return; }
-
-    this.feedbacks.update(list => list.map(f => f.id === fb.id ? { ...f, status } : f));
-    this.dragging.set(null);
-
-    this.service.updateStatus(this.projectId, fb.id, status).subscribe({
+    this.service.updateStatus(this.projectId, fb.id, targetStatus).subscribe({
       error: () => {
+        // Rollback
+        transferArrayItem(
+          event.container.data,
+          event.previousContainer.data,
+          event.currentIndex,
+          event.previousIndex
+        );
         this.feedbacks.update(list =>
-          list.map(f => f.id === fb.id ? { ...f, status: fb.status } : f)
+          list.map(f => f.id === fb.id ? { ...f, status: prevStatus } : f)
         );
         this.error.set('Impossible de mettre à jour le statut.');
       }
     });
   }
 
-  onDragOver(event: DragEvent): void { event.preventDefault(); }
+  // ─── Filtres ──────────────────────────────────────────────────────────────
+  onSearch(value: string): void { this.searchValue.set(value); this.search$.next(value); }
+
+  onStatusChange(value: string): void {
+    this.statusFilter.set(value as FeedbackStatus | '');
+    this.currentPage.set(1); this.syncUrl(); this.load();
+  }
+
+  onCategoryChange(value: string): void {
+    this.categoryFilter.set(value as FeedbackCategory | '');
+    this.currentPage.set(1); this.syncUrl(); this.load();
+  }
+
+  onPriorityChange(value: string): void {
+    this.priorityFilter.set(value as FeedbackPriority | '');
+    this.currentPage.set(1); this.syncUrl(); this.load();
+  }
+
+  onSortChange(value: string): void {
+    this.sortBy.set(value as SortBy);
+    this.currentPage.set(1); this.syncUrl(); this.load();
+  }
+
+  toggleCriticalMode(): void {
+    this.criticalMode.update(v => !v);
+    // Reset filtres IA avancés quand on entre en mode critique
+    if (this.criticalMode()) {
+      this.filterAction.set(false);
+      this.filterSentiment.set('');
+      this.filterMinScore.set(null);
+    }
+    this.currentPage.set(1); this.syncUrl(); this.load();
+  }
+
+  toggleActionFilter(): void { this.filterAction.update(v => !v); this.currentPage.set(1); this.load(); }
+
+  onSentimentChange(value: string): void { this.filterSentiment.set(value); this.currentPage.set(1); this.load(); }
+
+  onMinScoreChange(value: string): void {
+    const n = parseInt(value, 10);
+    this.filterMinScore.set(isNaN(n) ? null : n);
+    this.currentPage.set(1); this.load();
+  }
+
+  clearFilters(): void {
+    this.searchValue.set(''); this.statusFilter.set(''); this.categoryFilter.set('');
+    this.priorityFilter.set(''); this.sortBy.set('recent'); this.filterAction.set(false);
+    this.filterSentiment.set(''); this.filterMinScore.set(null); this.criticalMode.set(false);
+    this.currentPage.set(1); this.syncUrl(); this.load();
+  }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
+  getListForStatus(status: FeedbackStatus): Feedback[] {
+    if (status === 'Todo') return this.todoList();
+    if (status === 'InProgress') return this.inProgressList();
+    return this.doneList();
+  }
+
+  getDropData(status: FeedbackStatus): Feedback[] {
+    if (status === 'Todo') return this.todoList();
+    if (status === 'InProgress') return this.inProgressList();
+    return this.doneList();
+  }
+
   getCategoryLabel(category: string): string {
     const map: Record<string, string> = {
       Bug: '🐛 Bug', FeatureRequest: '✨ Feature',
@@ -236,35 +347,55 @@ export class Feedbacks implements OnInit, OnDestroy {
     return map[category] ?? category;
   }
 
-  getCategoryFilterLabel(category: string): string {
+  getCategoryFilterLabel(cat: string): string {
     const map: Record<string, string> = {
       Bug: '🐛 Bug', FeatureRequest: '✨ Fonctionnalité',
       Question: '❓ Question', Uncategorized: '📝 Non catégorisé',
     };
-    return map[category] ?? category;
+    return map[cat] ?? cat;
   }
 
   getPriorityLabel(priority: string): string {
     const map: Record<string, string> = {
-      Critical: '🔴 Critique', High: '🟠 Haute',
-      Normal: '🔵 Normale', Low: '⚪ Basse',
+      Critical: '🔴 Critique', High: '🟠 Haute', Normal: '🔵 Normale', Low: '⚪ Basse',
     };
     return map[priority] ?? priority;
   }
 
-  getColumnFeedbacks(status: FeedbackStatus): Feedback[] {
-    return this.feedbacks().filter(f => f.status === status);
+  getSentimentEmoji(sentiment: string): string {
+    const map: Record<string, string> = {
+      Positive: '😊', Neutral: '😐', Negative: '😞', Frustrated: '😤',
+    };
+    return map[sentiment] ?? '😐';
   }
 
   trackById(_: number, item: Feedback): string { return item.id; }
 
+  openDrawer(feedback: Feedback): void {
+    this.selectedFeedback.set(feedback);
+    this.drawerOpen.set(true);
+  }
+
+  closeDrawer(): void {
+    this.drawerOpen.set(false);
+    setTimeout(() => this.selectedFeedback.set(null), 320);
+  }
+
+  onDrawerStatusChanged(event: { id: string; status: FeedbackStatus }): void {
+    this.feedbacks.update(list =>
+      list.map(f => f.id === event.id ? { ...f, status: event.status } : f)
+    );
+    this.updateKanbanLists(this.feedbacks());
+    this.selectedFeedback.update(f => f?.id === event.id ? { ...f, status: event.status } : f);
+  }
+
   exportCsv(): void {
     if (this.exporting()) return;
     this.exporting.set(true);
-
     this.service.exportCsv(this.projectId, {
       category: this.categoryFilter() || undefined,
       priority: this.priorityFilter() || undefined,
+      status: this.statusFilter() || undefined,
     }).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
@@ -277,45 +408,11 @@ export class Feedbacks implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.exporting.set(false);
-        this.error.set(
-          err.status === 403
-            ? 'L\'export CSV est disponible à partir du plan Pro.'
-            : 'Erreur lors de l\'export. Réessayez.'
+        this.error.set(err.status === 403
+          ? "L'export CSV est disponible à partir du plan Pro."
+          : 'Erreur lors de l\'export. Réessayez.'
         );
       }
     });
-  }
-
-  // ─── Drawer ───────────────────────────────────────────────────────────────
-  openDrawer(feedback: Feedback): void {
-    this.selectedFeedback.set(feedback);
-    this.drawerOpen.set(true);
-  }
-
-  closeDrawer(): void {
-    this.drawerOpen.set(false);
-    // On laisse selectedFeedback en place pendant l'animation de fermeture (300ms)
-    setTimeout(() => this.selectedFeedback.set(null), 320);
-  }
-
-  onDrawerStatusChanged(event: { id: string; status: FeedbackStatus }): void {
-    this.feedbacks.update(list =>
-      list.map(f => f.id === event.id ? { ...f, status: event.status } : f)
-    );
-    // Met à jour aussi le feedback ouvert dans le drawer
-    this.selectedFeedback.update(f =>
-      f?.id === event.id ? { ...f, status: event.status } : f
-    );
-  }
-
-  // helper sentiment
-  getSentimentEmoji(sentiment: string): string {
-    const map: Record<string, string> = {
-      Positive: '😊',
-      Neutral: '😐',
-      Negative: '😞',
-      Frustrated: '😤',
-    };
-    return map[sentiment] ?? '😐';
   }
 }

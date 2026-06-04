@@ -6,9 +6,15 @@
       <h1 class="projects__title">Projets</h1>
       <p class="projects__subtitle">
         {{ activeProjects().length }} projet{{ activeProjects().length > 1 ? 's' : '' }} actif{{ activeProjects().length > 1 ? 's' : '' }}
-        @if (plan() !== 'Team') {
-          <span class="limit-badge">
-            {{ projects().length }}/{{ projectLimit() }} — Plan {{ plan() }}
+
+        @if (plan() === 'Team') {
+          <span class="limit-badge limit-badge--team">Plan Team — illimité</span>
+        } @else {
+          <span
+            class="limit-badge"
+            [class.limit-badge--warning]="projects().length >= projectLimit()"
+            [class.limit-badge--ok]="projects().length < projectLimit()">
+            Plan {{ plan() }} — {{ projects().length }}/{{ projectLimit() }} projet{{ projectLimit() > 1 ? 's' : '' }}
           </span>
         }
       </p>
@@ -17,11 +23,10 @@
     <div class="projects__header-actions">
       <button
         class="btn-ghost-icon"
-        (click)="toggleTrash(); $event.stopPropagation()"
-        [class.btn-ghost-icon--active]="showTrash()"
+        (click)="openTrash(); $event.stopPropagation()"
         title="Corbeille">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
-             stroke-linecap="round" stroke-linejoin="round">
+            stroke-linecap="round" stroke-linejoin="round">
           <polyline points="2 4 14 4"/>
           <path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/>
           <rect x="3" y="4" width="10" height="10" rx="1"/>
@@ -32,7 +37,6 @@
           <span class="btn-ghost-icon__badge">{{ deletedProjects().length }}</span>
         }
       </button>
-
       <button
         class="btn-primary"
         [disabled]="!canCreateMore()"
@@ -261,46 +265,6 @@
     </div>
   }
 
-  <!-- ══ CORBEILLE ════════════════════════════════════════════════════════════ -->
-  @if (showTrash()) {
-    <section class="trash">
-      <div class="trash__header">
-        <h3 class="trash__title">Corbeille</h3>
-        <span class="trash__subtitle">Suppression définitive après 30 jours</span>
-      </div>
-
-      @if (loadingTrash()) {
-        <div class="trash__loading">
-          <div class="project-skel project-skel--sm"></div>
-          <div class="project-skel project-skel--sm"></div>
-        </div>
-      } @else if (deletedProjects().length === 0) {
-        <p class="trash__empty">La corbeille est vide.</p>
-      } @else {
-        <ul class="trash__list">
-          @for (project of deletedProjects(); track project.id) {
-            <li class="trash-item">
-              <div class="trash-item__info">
-                <span class="trash-item__name">{{ project.name }}</span>
-                <span
-                  class="trash-item__countdown"
-                  [class.trash-item__countdown--urgent]="project.daysUntilPurge <= 7">
-                  Suppression dans {{ project.daysUntilPurge }} jour{{ project.daysUntilPurge > 1 ? 's' : '' }}
-                </span>
-              </div>
-              <button
-                class="btn-restore"
-                (click)="onRestore(project)"
-                [disabled]="restoringId() === project.id">
-                {{ restoringId() === project.id ? 'Restauration…' : 'Restaurer' }}
-              </button>
-            </li>
-          }
-        </ul>
-      }
-    </section>
-  }
-
   <!-- ══ UPGRADE BANNER ═══════════════════════════════════════════════════════ -->
   @if (plan() === 'Free' && projects().length >= 1) {
     <div class="upgrade-banner">
@@ -314,6 +278,104 @@
   }
 
 </div>
+
+<!-- ══ DRAWER CORBEILLE ══════════════════════════════════════════════════════ -->
+@if (showTrash()) {
+  <!-- Overlay -->
+  <div class="drawer-overlay" (click)="closeTrash()" aria-hidden="true"></div>
+
+  <!-- Drawer -->
+  <aside class="drawer" role="dialog" aria-modal="true" aria-label="Corbeille">
+
+    <div class="drawer__header">
+      <div class="drawer__header-left">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="2 4 14 4"/>
+          <path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/>
+          <rect x="3" y="4" width="10" height="10" rx="1"/>
+          <line x1="6" y1="8" x2="6" y2="11"/>
+          <line x1="10" y1="8" x2="10" y2="11"/>
+        </svg>
+        <h2 class="drawer__title">Corbeille</h2>
+        @if (deletedProjects().length > 0) {
+          <span class="drawer__count">{{ deletedProjects().length }}</span>
+        }
+      </div>
+      <button class="modal__close" (click)="closeTrash()" aria-label="Fermer la corbeille">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <line x1="1" y1="1" x2="13" y2="13"/>
+          <line x1="13" y1="1" x2="1" y2="13"/>
+        </svg>
+      </button>
+    </div>
+
+    <p class="drawer__subtitle">
+      Les projets sont supprimés définitivement après 30 jours.
+    </p>
+
+    <div class="drawer__body">
+
+      @if (loadingTrash()) {
+        <div class="drawer__loading">
+          <div class="project-skel project-skel--sm"></div>
+          <div class="project-skel project-skel--sm"></div>
+        </div>
+      } @else if (deletedProjects().length === 0) {
+        <div class="drawer__empty">
+          <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 10 36 10"/>
+            <path d="M12 10V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/>
+            <rect x="6" y="10" width="28" height="24" rx="2"/>
+            <line x1="15" y1="18" x2="15" y2="28"/>
+            <line x1="25" y1="18" x2="25" y2="28"/>
+          </svg>
+          <p>La corbeille est vide</p>
+        </div>
+      } @else {
+        <ul class="drawer__list">
+          @for (project of deletedProjects(); track project.id) {
+            <li class="drawer-item">
+
+              <!-- Avatar -->
+              <div class="drawer-item__avatar" [style.background]="getProjectColor(project.id)">
+                {{ getInitials(project.name) }}
+              </div>
+
+              <!-- Info -->
+              <div class="drawer-item__info">
+                <span class="drawer-item__name">{{ project.name }}</span>
+                <span
+                  class="drawer-item__countdown"
+                  [class.drawer-item__countdown--urgent]="project.daysUntilPurge <= 7">
+                  @if (project.daysUntilPurge <= 7) { ⚠ }
+                  Suppression dans {{ project.daysUntilPurge }} jour{{ project.daysUntilPurge > 1 ? 's' : '' }}
+                </span>
+              </div>
+
+              <!-- Action -->
+              <button
+                class="btn-restore"
+                (click)="onRestore(project)"
+                [disabled]="restoringId() === project.id">
+                @if (restoringId() === project.id) {
+                  <span class="spinner spinner--dark"></span>
+                } @else {
+                  Restaurer
+                }
+              </button>
+
+            </li>
+          }
+        </ul>
+      }
+
+    </div>
+
+  </aside>
+}
 
 <!-- ══ MODALS ═══════════════════════════════════════════════════════════════ -->
 

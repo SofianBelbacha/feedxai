@@ -24,17 +24,35 @@ namespace AiReviewHub.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll(
             Guid projectId,
-            [FromQuery] FeedbackStatus? status,
-            [FromQuery] FeedbackCategory? category,
-            [FromQuery] FeedbackPriority? priority,
-            [FromQuery] string? search,
+            [FromQuery] string? search = null,
+            [FromQuery] string? status = null,
+            [FromQuery] string? category = null,
+            [FromQuery] string? priority = null,
+            [FromQuery] string? sortBy = null,
+            [FromQuery] bool? actionRequired = null,
+            [FromQuery] string? sentiment = null,
+            [FromQuery] int? minScore = null,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20,
             CancellationToken cancellationToken = default)
         {
-            var result = await _mediator.Send(
-                new GetFeedbacksByProjectQuery(projectId, status, category, priority, search, page, pageSize),
-                cancellationToken);
+            Enum.TryParse<FeedbackStatus>(status, out var statusEnum);
+            Enum.TryParse<FeedbackCategory>(category, out var categoryEnum);
+            Enum.TryParse<FeedbackPriority>(priority, out var priorityEnum);
+
+            var result = await _mediator.Send(new GetFeedbacksByProjectQuery(
+                ProjectId: projectId,
+                StatusFilter: string.IsNullOrEmpty(status) ? null : statusEnum,
+                CategoryFilter: string.IsNullOrEmpty(category) ? null : categoryEnum,
+                PriorityFilter: string.IsNullOrEmpty(priority) ? null : priorityEnum,
+                Search: search,
+                SortBy: sortBy,
+                ActionRequired: actionRequired,
+                Sentiment: sentiment,
+                MinScore: minScore,
+                Page: page,
+                PageSize: pageSize
+            ), cancellationToken);
 
             return Ok(result);
         }

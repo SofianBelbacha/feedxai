@@ -14,9 +14,14 @@ export class FeedbacksService {
       .set('page', filters.page)
       .set('pageSize', filters.pageSize);
 
+    if (filters.search) params = params.set('search', filters.search);
     if (filters.category) params = params.set('category', filters.category);
     if (filters.priority) params = params.set('priority', filters.priority);
-    if (filters.search) params = params.set('search', filters.search);
+    if (filters.status) params = params.set('status', filters.status);  // ← corrigé
+    if (filters.sortBy) params = params.set('sortBy', filters.sortBy);
+    if (filters.actionRequired) params = params.set('actionRequired', 'true');
+    if (filters.sentiment) params = params.set('sentiment', filters.sentiment);
+    if (filters.minScore != null) params = params.set('minScore', filters.minScore);
 
     return this.http.get<PagedResult<Feedback>>(
       `${this.API}/projects/${projectId}/feedbacks`,
@@ -24,11 +29,7 @@ export class FeedbacksService {
     );
   }
 
-  updateStatus(
-    projectId: string,
-    feedbackId: string,
-    newStatus: FeedbackStatus
-  ): Observable<void> {
+  updateStatus(projectId: string, feedbackId: string, newStatus: FeedbackStatus): Observable<void> {
     return this.http.patch<void>(
       `${this.API}/projects/${projectId}/feedbacks/${feedbackId}/status`,
       { newStatus },
@@ -36,10 +37,7 @@ export class FeedbacksService {
     );
   }
 
-  exportCsv(
-    projectId: string,
-    filters: Partial<FeedbackFilters>
-  ): Observable<Blob> {
+  exportCsv(projectId: string, filters: Partial<FeedbackFilters>): Observable<Blob> {
     let params = new HttpParams();
     if (filters.category) params = params.set('category', filters.category);
     if (filters.priority) params = params.set('priority', filters.priority);

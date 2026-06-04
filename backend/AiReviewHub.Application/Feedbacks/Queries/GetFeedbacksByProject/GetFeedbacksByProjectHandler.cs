@@ -61,14 +61,33 @@ namespace AiReviewHub.Application.Feedbacks.Queries.GetFeedbacksByProject
             if (request.PriorityFilter.HasValue)
                 query = query.Where(f => f.Priority == request.PriorityFilter.Value);
 
+            // Filtres IA avancés
+            if (request.ActionRequired == true)
+                query = query.Where(f => f.ActionRequired == true);
+
+            if (!string.IsNullOrWhiteSpace(request.Sentiment))
+                query = query.Where(f => f.Sentiment == request.Sentiment);
+
+            if (request.MinScore.HasValue)
+                query = query.Where(f => f.PriorityScore >= request.MinScore.Value);
+
             var total = await query.CountAsync(cancellationToken);
 
-            var feedbacks = await query
-                .OrderByDescending(f => f.CreatedAt)
+            // Tri — en SQL, pas en mémoire
+            var ordered = request.SortBy switch
+            {
+                "oldest" => query.OrderBy(f => f.CreatedAt),
+                "priority" => query.OrderBy(f => f.Priority),   
+                "score" => query.OrderByDescending(f => f.PriorityScore ?? 0),
+                "action" => query.OrderByDescending(f => f.ActionRequired == true ? 1 : 0).ThenByDescending(f => f.PriorityScore ?? 0),
+                _ => query.OrderByDescending(f => f.CreatedAt)
+            };
+
+            var feedbacks = await ordered
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
-
+            
             var dtos = feedbacks
                 .Select(f => new FeedbackDto(
                     f.Id,

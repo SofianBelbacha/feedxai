@@ -90,7 +90,10 @@ export class Projects implements OnInit {
   );
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
-  ngOnInit(): void { this.load(); }
+  ngOnInit(): void { 
+    this.load();
+    this.loadTrashCount();
+  }
 
   load(): void {
     this.loading.set(true);
@@ -100,6 +103,14 @@ export class Projects implements OnInit {
       error: ()       => { this.error.set('Impossible de charger les projets.'); this.loading.set(false); }
     });
   }
+
+  loadTrashCount(): void {
+    this.service.getDeleted().subscribe({
+      next: (projects) => this.deletedProjects.set(projects),
+      error: () => {}
+    });
+  }
+
 
   // ─── Création ─────────────────────────────────────────────────────────────
   openModal(): void {
@@ -120,7 +131,7 @@ export class Projects implements OnInit {
     this.creating.set(true);
     this.service.create({ name, description: this.newDescription().trim() }).subscribe({
       next: (project) => {
-        this.projects.update(list => [project, ...list]);
+        this.projects.update(list => [{ ...project, feedbackCount: project.feedbackCount ?? 0 }, ...list]);
         this.creating.set(false);
         this.closeModal();
       },
@@ -305,9 +316,10 @@ export class Projects implements OnInit {
   }
 
   // ─── Corbeille ────────────────────────────────────────────────────────────
-  toggleTrash(): void {
-    this.showTrash.update(v => !v);
-    if (this.showTrash() && this.deletedProjects().length === 0) this.loadTrash();
+  openTrash(): void {
+    this.showTrash.set(true);
+    // Recharger si la liste est potentiellement stale
+    this.loadTrash();
   }
 
   loadTrash(): void {
@@ -316,6 +328,10 @@ export class Projects implements OnInit {
       next:  (projects) => { this.deletedProjects.set(projects); this.loadingTrash.set(false); },
       error: ()         => this.loadingTrash.set(false)
     });
+  }
+
+  closeTrash(): void {
+    this.showTrash.set(false);
   }
 
   onRestore(project: DeletedProject): void {
