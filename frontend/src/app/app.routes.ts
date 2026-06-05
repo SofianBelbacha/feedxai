@@ -21,6 +21,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/auth/register/register').then(m => m.Register)
     },
     {
+        path: 'feedbacks',
+        loadComponent: () => import('./features/dashboard/feedbacks/feedbacks').then(m => m.Feedbacks) 
+    },
+    {
         path: 'legal',
         children: [
             { path: 'terms', loadComponent: () => import('./features/legal/terms/terms').then(m => m.Terms) },

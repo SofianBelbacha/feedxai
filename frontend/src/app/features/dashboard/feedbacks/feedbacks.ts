@@ -20,6 +20,8 @@ import { UserService } from '../../../core/services/user.service';
 import { DashboardContextService } from '../../../core/services/dashboard-context.service';
 import { FeedbackDrawer } from '../../../shared/components/feedback-drawer/feedback-drawer';
 
+type FlowStep = 'collect' | 'analyze' | 'prioritize' | 'build';
+
 @Component({
   selector: 'app-feedbacks',
   imports: [
@@ -48,7 +50,7 @@ export class Feedbacks implements OnInit, OnDestroy {
   totalCount = signal(0);
   exporting = signal(false);
 
-  // Vues filtrées pour le kanban — mutable pour CDK
+  // Listes Kanban CDK
   todoList = signal<Feedback[]>([]);
   inProgressList = signal<Feedback[]>([]);
   doneList = signal<Feedback[]>([]);
@@ -63,35 +65,87 @@ export class Feedbacks implements OnInit, OnDestroy {
   categoryFilter = signal<FeedbackCategory | ''>('');
   priorityFilter = signal<FeedbackPriority | ''>('');
   sortBy = signal<SortBy>('recent');
-  // Filtres IA avancés
   filterAction = signal(false);
-  filterSentiment = signal<string>('');
+  filterSentiment = signal('');
   filterMinScore = signal<number | null>(null);
   showAiFilters = signal(false);
-  // Vue critiques
   criticalMode = signal(false);
   currentPage = signal(1);
   readonly pageSize = 50;
 
-  readonly columns: { status: FeedbackStatus; label: string; color: string }[] = [
-    { status: 'Todo', label: 'À traiter', color: 'amber' },
-    { status: 'InProgress', label: 'En cours', color: 'violet' },
-    { status: 'Done', label: 'Résolus', color: 'emerald' },
+  // ─── Flow step ────────────────────────────────────────────────────────────
+  activeFlowStep = signal<FlowStep>('collect');
+
+  readonly flowSteps: { key: FlowStep; label: string; icon: string }[] = [
+    { key: 'collect', label: 'Collecter', icon: 'ti-database' },
+    { key: 'analyze', label: 'Analyser IA', icon: 'ti-sparkles' },
+    { key: 'prioritize', label: 'Prioriser', icon: 'ti-sort-descending' },
+    { key: 'build', label: 'Construire', icon: 'ti-hammer' },
   ];
 
-  // Computed counts
+  // ─── Colonnes Kanban ──────────────────────────────────────────────────────
+  readonly columns: { status: FeedbackStatus; label: string; colorClass: string }[] = [
+    { status: 'Todo', label: 'Nouveau', colorClass: 'col--new' },
+    { status: 'InProgress', label: 'En cours', colorClass: 'col--prog' },
+    { status: 'Done', label: 'Terminé', colorClass: 'col--done' },
+  ];
+
+  // ─── Computed ─────────────────────────────────────────────────────────────
   readonly criticalCount = computed(() =>
     this.feedbacks().filter(f =>
       (f.priorityScore ?? 0) > 80 || f.actionRequired || f.sentiment === 'Frustrated'
     ).length
   );
 
+  readonly pendingAiCount = computed(() =>
+    this.feedbacks().filter(f =>
+      f.aiAnalysisStatus === 'Pending' || f.aiAnalysisStatus === 'Processing'
+    ).length
+  );
+
+  readonly highPriorityCount = computed(() =>
+    this.feedbacks().filter(f =>
+      f.priority === 'High' || f.priority === 'Critical'
+    ).length
+  );
+
+  readonly doneCount = computed(() =>
+    this.feedbacks().filter(f => f.status === 'Done').length
+  );
+
+  readonly newThisWeek = computed(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 7);
+    return this.feedbacks().filter(f => new Date(f.createdAt) >= cutoff).length;
+  });
+
   readonly hasActiveFilters = computed(() =>
     !!this.searchValue() || !!this.statusFilter() || !!this.categoryFilter() ||
     !!this.priorityFilter() || this.sortBy() !== 'recent' ||
-    this.filterAction() || !!this.filterSentiment() || this.filterMinScore() !== null ||
-    this.criticalMode()
+    this.filterAction() || !!this.filterSentiment() ||
+    this.filterMinScore() !== null || this.criticalMode()
   );
+
+  // Vue IA — top topics depuis keyTopics
+  readonly topTopics = computed(() => {
+    const map = new Map<string, number>();
+    this.feedbacks()
+      .filter(f => f.keyTopics?.length)
+      .forEach(f => f.keyTopics!.forEach(t => map.set(t, (map.get(t) ?? 0) + 1)));
+    return [...map.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([topic, count]) => ({ topic, count }));
+  });
+
+  readonly mainFrustration = computed(() => {
+    const frustrated = this.feedbacks().filter(f => f.sentiment === 'Frustrated');
+    if (!frustrated.length) return null;
+    const byCategory = new Map<string, number>();
+    frustrated.forEach(f => byCategory.set(f.category, (byCategory.get(f.category) ?? 0) + 1));
+    const [top] = [...byCategory.entries()].sort((a, b) => b[1] - a[1]);
+    return top ? { category: top[0], count: top[1] } : null;
+  });
 
   readonly categories: FeedbackCategory[] = ['Bug', 'FeatureRequest', 'Question', 'Uncategorized'];
   readonly priorities: FeedbackPriority[] = ['Critical', 'High', 'Normal', 'Low'];
@@ -102,15 +156,12 @@ export class Feedbacks implements OnInit, OnDestroy {
     { value: 'score', label: 'Score IA' },
     { value: 'action', label: 'Action requise' },
   ];
-  readonly sentimentOptions = ['Frustrated', 'Negative', 'Neutral', 'Positive'];
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
   ngOnInit(): void {
-    // Restaurer les filtres depuis l'URL
     this.route.queryParams.subscribe(params => {
       if (params['status']) this.statusFilter.set(params['status']);
       if (params['priority']) this.priorityFilter.set(params['priority']);
-      if (params['category']) this.categoryFilter.set(params['category']);
       if (params['sort']) this.sortBy.set(params['sort']);
       if (params['critical']) this.criticalMode.set(params['critical'] === 'true');
     });
@@ -131,15 +182,13 @@ export class Feedbacks implements OnInit, OnDestroy {
 
   ngOnDestroy(): void { this.pollSub?.unsubscribe(); this.search$.complete(); }
 
-  // ─── URL params ───────────────────────────────────────────────────────────
+  // ─── URL sync ─────────────────────────────────────────────────────────────
   private syncUrl(): void {
     const params: Record<string, string> = {};
     if (this.statusFilter()) params['status'] = this.statusFilter()!;
     if (this.priorityFilter()) params['priority'] = this.priorityFilter()!;
-    if (this.categoryFilter()) params['category'] = this.categoryFilter()!;
     if (this.sortBy() !== 'recent') params['sort'] = this.sortBy();
     if (this.criticalMode()) params['critical'] = 'true';
-
     this.router.navigate([], { queryParams: params, replaceUrl: true });
   }
 
@@ -148,11 +197,10 @@ export class Feedbacks implements OnInit, OnDestroy {
 
   load(): void {
     if (!this.projectId) {
-      this.feedbacks.set([]); this.totalCount.set(0); this.loading.set(false);
-      this.error.set('Aucun projet sélectionné.');
+      this.feedbacks.set([]); this.totalCount.set(0);
+      this.loading.set(false); this.error.set('Aucun projet sélectionné.');
       return;
     }
-
     this.loading.set(true);
     this.error.set('');
 
@@ -165,11 +213,8 @@ export class Feedbacks implements OnInit, OnDestroy {
       page: this.currentPage(),
       pageSize: this.pageSize,
     };
-
-    // Mode critiques — override les filtres IA
     if (this.criticalMode()) {
       filters.minScore = 80;
-      filters.actionRequired = undefined; // on laisse le score gérer
     } else {
       if (this.filterAction()) filters.actionRequired = true;
       if (this.filterSentiment()) filters.sentiment = this.filterSentiment();
@@ -177,17 +222,14 @@ export class Feedbacks implements OnInit, OnDestroy {
     }
 
     this.service.getAll(this.projectId, filters).subscribe({
-      next: (result) => {
+      next: result => {
         this.feedbacks.set(result.data);
         this.totalCount.set(result.meta.total);
         this.updateKanbanLists(result.data);
         this.loading.set(false);
         this.startPollingIfNeeded();
       },
-      error: () => {
-        this.error.set('Impossible de charger les feedbacks.');
-        this.loading.set(false);
-      }
+      error: () => { this.error.set('Impossible de charger les feedbacks.'); this.loading.set(false); }
     });
   }
 
@@ -197,7 +239,7 @@ export class Feedbacks implements OnInit, OnDestroy {
     this.doneList.set(feedbacks.filter(f => f.status === 'Done'));
   }
 
-  // ─── Polling IA avec MAX_POLLS ────────────────────────────────────────────
+  // ─── Polling IA ───────────────────────────────────────────────────────────
   private startPollingIfNeeded(): void {
     const hasPending = this.feedbacks().some(
       f => f.aiAnalysisStatus === 'Pending' || f.aiAnalysisStatus === 'Processing'
@@ -221,15 +263,14 @@ export class Feedbacks implements OnInit, OnDestroy {
         ) && pollCount < MAX_POLLS;
       }, true)
     ).subscribe({
-      next: (result) => {
+      next: result => {
         this.feedbacks.set(result.data);
         this.updateKanbanLists(result.data);
         const stillPending = result.data.some(
           f => f.aiAnalysisStatus === 'Pending' || f.aiAnalysisStatus === 'Processing'
         );
         if (!stillPending || pollCount >= MAX_POLLS) {
-          this.pollSub?.unsubscribe();
-          this.pollSub = undefined;
+          this.pollSub?.unsubscribe(); this.pollSub = undefined;
         }
       }
     });
@@ -241,32 +282,22 @@ export class Feedbacks implements OnInit, OnDestroy {
       moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
       return;
     }
-
     const fb = event.previousContainer.data[event.previousIndex];
     const prevStatus = fb.status;
 
-    // Mise à jour optimiste
     transferArrayItem(
       event.previousContainer.data,
       event.container.data,
       event.previousIndex,
       event.currentIndex
     );
-
-    // Sync signal feedbacks global
     this.feedbacks.update(list =>
       list.map(f => f.id === fb.id ? { ...f, status: targetStatus } : f)
     );
 
     this.service.updateStatus(this.projectId, fb.id, targetStatus).subscribe({
       error: () => {
-        // Rollback
-        transferArrayItem(
-          event.container.data,
-          event.previousContainer.data,
-          event.currentIndex,
-          event.previousIndex
-        );
+        transferArrayItem(event.container.data, event.previousContainer.data, event.currentIndex, event.previousIndex);
         this.feedbacks.update(list =>
           list.map(f => f.id === fb.id ? { ...f, status: prevStatus } : f)
         );
@@ -278,14 +309,13 @@ export class Feedbacks implements OnInit, OnDestroy {
   // ─── Filtres ──────────────────────────────────────────────────────────────
   onSearch(value: string): void { this.searchValue.set(value); this.search$.next(value); }
 
-  onStatusChange(value: string): void {
-    this.statusFilter.set(value as FeedbackStatus | '');
-    this.currentPage.set(1); this.syncUrl(); this.load();
+  setStatusFilter(value: FeedbackStatus | ''): void {
+    this.statusFilter.set(value); this.currentPage.set(1); this.syncUrl(); this.load();
   }
 
   onCategoryChange(value: string): void {
     this.categoryFilter.set(value as FeedbackCategory | '');
-    this.currentPage.set(1); this.syncUrl(); this.load();
+    this.currentPage.set(1); this.load();
   }
 
   onPriorityChange(value: string): void {
@@ -300,11 +330,8 @@ export class Feedbacks implements OnInit, OnDestroy {
 
   toggleCriticalMode(): void {
     this.criticalMode.update(v => !v);
-    // Reset filtres IA avancés quand on entre en mode critique
     if (this.criticalMode()) {
-      this.filterAction.set(false);
-      this.filterSentiment.set('');
-      this.filterMinScore.set(null);
+      this.filterAction.set(false); this.filterSentiment.set(''); this.filterMinScore.set(null);
     }
     this.currentPage.set(1); this.syncUrl(); this.load();
   }
@@ -312,12 +339,6 @@ export class Feedbacks implements OnInit, OnDestroy {
   toggleActionFilter(): void { this.filterAction.update(v => !v); this.currentPage.set(1); this.load(); }
 
   onSentimentChange(value: string): void { this.filterSentiment.set(value); this.currentPage.set(1); this.load(); }
-
-  onMinScoreChange(value: string): void {
-    const n = parseInt(value, 10);
-    this.filterMinScore.set(isNaN(n) ? null : n);
-    this.currentPage.set(1); this.load();
-  }
 
   clearFilters(): void {
     this.searchValue.set(''); this.statusFilter.set(''); this.categoryFilter.set('');
@@ -334,42 +355,78 @@ export class Feedbacks implements OnInit, OnDestroy {
   }
 
   getDropData(status: FeedbackStatus): Feedback[] {
-    if (status === 'Todo') return this.todoList();
-    if (status === 'InProgress') return this.inProgressList();
-    return this.doneList();
+    return this.getListForStatus(status);
   }
 
-  getCategoryLabel(category: string): string {
+  getCategoryLabel(cat: string): string {
     const map: Record<string, string> = {
-      Bug: '🐛 Bug', FeatureRequest: '✨ Feature',
-      Question: '❓ Question', Uncategorized: '📝 Autre',
-    };
-    return map[category] ?? category;
-  }
-
-  getCategoryFilterLabel(cat: string): string {
-    const map: Record<string, string> = {
-      Bug: '🐛 Bug', FeatureRequest: '✨ Fonctionnalité',
-      Question: '❓ Question', Uncategorized: '📝 Non catégorisé',
+      Bug: 'Bug', FeatureRequest: 'Fonctionnalité', Question: 'Question', Uncategorized: 'Autre',
     };
     return map[cat] ?? cat;
   }
 
+  getCategoryClass(cat: string): string {
+    const map: Record<string, string> = {
+      Bug: 'tag-bug', FeatureRequest: 'tag-feat', Question: 'tag-quest', Uncategorized: 'tag-other',
+    };
+    return map[cat] ?? 'tag-other';
+  }
+
+  getPriorityClass(priority: string): string {
+    const map: Record<string, string> = {
+      Critical: 'pb-crit', High: 'pb-high', Normal: 'pb-med', Low: 'pb-low',
+    };
+    return map[priority] ?? 'pb-low';
+  }
+
+  getPriorityTagClass(priority: string): string {
+    const map: Record<string, string> = {
+      Critical: 'tag-crit', High: 'tag-high', Normal: 'tag-med', Low: 'tag-low',
+    };
+    return map[priority] ?? 'tag-low';
+  }
+
   getPriorityLabel(priority: string): string {
     const map: Record<string, string> = {
-      Critical: '🔴 Critique', High: '🟠 Haute', Normal: '🔵 Normale', Low: '⚪ Basse',
+      Critical: 'Critique', High: 'Haute', Normal: 'Normale', Low: 'Basse',
     };
     return map[priority] ?? priority;
   }
 
-  getSentimentEmoji(sentiment: string): string {
+  getSentimentClass(sentiment: string): string {
     const map: Record<string, string> = {
-      Positive: '😊', Neutral: '😐', Negative: '😞', Frustrated: '😤',
+      Positive: 'sent-pos', Neutral: 'sent-neu', Negative: 'sent-neg', Frustrated: 'sent-frus',
     };
-    return map[sentiment] ?? '😐';
+    return map[sentiment] ?? 'sent-neu';
   }
 
-  trackById(_: number, item: Feedback): string { return item.id; }
+  getSentimentLabel(sentiment: string): string {
+    const map: Record<string, string> = {
+      Positive: 'Positif', Neutral: 'Neutre', Negative: 'Négatif', Frustrated: 'Frustré',
+    };
+    return map[sentiment] ?? sentiment;
+  }
+
+  getUserInitials(index: number): string {
+    const initials = ['SA', 'MR', 'LC', 'PD', 'AM', 'TL', 'RK', 'NF', 'CB', 'JL'];
+    return initials[index % initials.length];
+  }
+
+  getAvatarColor(index: number): string {
+    const colors = [
+      '#DBEAFE', '#D1FAE5', '#FEF3C7', '#EDE9FE',
+      '#FCE7F3', '#E0E7FF', '#FEF9C3', '#F1F5F9'
+    ];
+    return colors[index % colors.length];
+  }
+
+  getAvatarTextColor(index: number): string {
+    const colors = [
+      '#1E40AF', '#065F46', '#92400E', '#5B21B6',
+      '#9D174D', '#3730A3', '#713F12', '#475569'
+    ];
+    return colors[index % colors.length];
+  }
 
   openDrawer(feedback: Feedback): void {
     this.selectedFeedback.set(feedback);
@@ -389,6 +446,8 @@ export class Feedbacks implements OnInit, OnDestroy {
     this.selectedFeedback.update(f => f?.id === event.id ? { ...f, status: event.status } : f);
   }
 
+  trackById(_: number, item: Feedback): string { return item.id; }
+
   exportCsv(): void {
     if (this.exporting()) return;
     this.exporting.set(true);
@@ -397,21 +456,18 @@ export class Feedbacks implements OnInit, OnDestroy {
       priority: this.priorityFilter() || undefined,
       status: this.statusFilter() || undefined,
     }).subscribe({
-      next: (blob) => {
+      next: blob => {
         const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `feedbacks_${new Date().toISOString().slice(0, 10)}.csv`;
-        link.click();
-        URL.revokeObjectURL(url);
+        const a = document.createElement('a');
+        a.href = url; a.download = `feedbacks_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click(); URL.revokeObjectURL(url);
         this.exporting.set(false);
       },
-      error: (err) => {
+      error: err => {
         this.exporting.set(false);
         this.error.set(err.status === 403
           ? "L'export CSV est disponible à partir du plan Pro."
-          : 'Erreur lors de l\'export. Réessayez.'
-        );
+          : 'Erreur lors de l\'export.');
       }
     });
   }
