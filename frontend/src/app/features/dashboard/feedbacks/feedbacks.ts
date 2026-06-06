@@ -1,8 +1,9 @@
 import {
-  Component, OnInit, OnDestroy, inject, signal, computed, effect, Injector
+  Component, OnInit, OnDestroy, inject,
+  signal, computed, effect, Injector
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import {
   CdkDragDrop, CdkDrag, CdkDropList,
   CdkDropListGroup, moveItemInArray, transferArrayItem
@@ -19,23 +20,26 @@ import {
 import { UserService } from '../../../core/services/user.service';
 import { DashboardContextService } from '../../../core/services/dashboard-context.service';
 import { FeedbackDrawer } from '../../../shared/components/feedback-drawer/feedback-drawer';
-
-type FlowStep = 'collect' | 'analyze' | 'prioritize' | 'build';
+import { Project } from '../projects/projects.types';
+import { ProjectsService } from '../projects/projects.service';
 
 @Component({
   selector: 'app-feedbacks',
+  standalone: true,
   imports: [
-    CommonModule, DatePipe, FeedbackDrawer,
-    CdkDrag, CdkDropList, CdkDropListGroup
+    CommonModule, DatePipe, RouterLink, FeedbackDrawer,
+    CdkDrag, CdkDropList, CdkDropListGroup,
   ],
   templateUrl: './feedbacks.html',
   styleUrl: './feedbacks.scss',
 })
 export class Feedbacks implements OnInit, OnDestroy {
+
   private readonly service = inject(FeedbacksService);
   private readonly injector = inject(Injector);
   private readonly userService = inject(UserService);
   private readonly dashboardContext = inject(DashboardContextService);
+  private readonly projectsService  = inject(ProjectsService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly search$ = new Subject<string>();
@@ -49,9 +53,13 @@ export class Feedbacks implements OnInit, OnDestroy {
   feedbacks = signal<Feedback[]>([]);
   totalCount = signal(0);
   exporting = signal(false);
+  projects = signal<Project[]>([]);
+  
 
-  // Listes Kanban CDK
+  // Listes par colonne
   todoList = signal<Feedback[]>([]);
+  inReviewList = signal<Feedback[]>([]);
+  plannedList = signal<Feedback[]>([]);
   inProgressList = signal<Feedback[]>([]);
   doneList = signal<Feedback[]>([]);
 
@@ -71,24 +79,24 @@ export class Feedbacks implements OnInit, OnDestroy {
   showAiFilters = signal(false);
   criticalMode = signal(false);
   currentPage = signal(1);
-  readonly pageSize = 50;
+  readonly pageSize = 100; // on charge tout pour le kanban
 
-  // ─── Flow step ────────────────────────────────────────────────────────────
-  activeFlowStep = signal<FlowStep>('collect');
+  // ─── Flow step actif ──────────────────────────────────────────────────────
+  activeFlow = signal<'collect' | 'analyze' | 'prioritize' | 'build'>('collect');
 
-  readonly flowSteps: { key: FlowStep; label: string; icon: string }[] = [
-    { key: 'collect', label: 'Collecter', icon: 'ti-database' },
-    { key: 'analyze', label: 'Analyser IA', icon: 'ti-sparkles' },
-    { key: 'prioritize', label: 'Prioriser', icon: 'ti-sort-descending' },
-    { key: 'build', label: 'Construire', icon: 'ti-hammer' },
-  ];
-
-  // ─── Colonnes Kanban ──────────────────────────────────────────────────────
-  readonly columns: { status: FeedbackStatus; label: string; colorClass: string }[] = [
-    { status: 'Todo', label: 'Nouveau', colorClass: 'col--new' },
-    { status: 'InProgress', label: 'En cours', colorClass: 'col--prog' },
-    { status: 'Done', label: 'Terminé', colorClass: 'col--done' },
-  ];
+  // ─── Colonnes ─────────────────────────────────────────────────────────────
+  readonly columns: {
+    status: FeedbackStatus;
+    label: string;
+    dotColor: string;
+    cssClass: string;
+  }[] = [
+      { status: 'Todo', label: 'Nouveau', dotColor: '#94A3B8', cssClass: 'col-new' },
+      //{ status: 'InReview',   label: 'En révision', dotColor: '#F59E0B', cssClass: 'col-review' },
+      //{ status: 'Planned',    label: 'Planifié',    dotColor: '#60A5FA', cssClass: 'col-plan'   },
+      { status: 'InProgress', label: 'En cours', dotColor: '#8B5CF6', cssClass: 'col-prog' },
+      { status: 'Done', label: 'Terminé', dotColor: '#34D399', cssClass: 'col-done' },
+    ];
 
   // ─── Computed ─────────────────────────────────────────────────────────────
   readonly criticalCount = computed(() =>
@@ -109,8 +117,8 @@ export class Feedbacks implements OnInit, OnDestroy {
     ).length
   );
 
-  readonly doneCount = computed(() =>
-    this.feedbacks().filter(f => f.status === 'Done').length
+  readonly analyzedCount = computed(() =>
+    this.feedbacks().filter(f => f.aiAnalysisStatus === 'Completed').length
   );
 
   readonly newThisWeek = computed(() => {
@@ -126,29 +134,44 @@ export class Feedbacks implements OnInit, OnDestroy {
     this.filterMinScore() !== null || this.criticalMode()
   );
 
-  // Vue IA — top topics depuis keyTopics
-  readonly topTopics = computed(() => {
-    const map = new Map<string, number>();
-    this.feedbacks()
-      .filter(f => f.keyTopics?.length)
-      .forEach(f => f.keyTopics!.forEach(t => map.set(t, (map.get(t) ?? 0) + 1)));
-    return [...map.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([topic, count]) => ({ topic, count }));
+  // Insights IA calculés depuis les données
+  readonly topRequestedFeature = computed(() => {
+    const features = this.feedbacks().filter(f => f.category === 'FeatureRequest');
+    if (!features.length) return null;
+    const topicMap = new Map<string, number>();
+    features.forEach(f =>
+      f.keyTopics?.forEach(t => topicMap.set(t, (topicMap.get(t) ?? 0) + 1))
+    );
+    const top = [...topicMap.entries()].sort((a, b) => b[1] - a[1])[0];
+    return top ? { topic: top[0], count: top[1] } : null;
   });
 
   readonly mainFrustration = computed(() => {
     const frustrated = this.feedbacks().filter(f => f.sentiment === 'Frustrated');
     if (!frustrated.length) return null;
-    const byCategory = new Map<string, number>();
-    frustrated.forEach(f => byCategory.set(f.category, (byCategory.get(f.category) ?? 0) + 1));
-    const [top] = [...byCategory.entries()].sort((a, b) => b[1] - a[1]);
+    const catMap = new Map<string, number>();
+    frustrated.forEach(f => catMap.set(f.category, (catMap.get(f.category) ?? 0) + 1));
+    const top = [...catMap.entries()].sort((a, b) => b[1] - a[1])[0];
     return top ? { category: top[0], count: top[1] } : null;
   });
 
-  readonly categories: FeedbackCategory[] = ['Bug', 'FeatureRequest', 'Question', 'Uncategorized'];
-  readonly priorities: FeedbackPriority[] = ['Critical', 'High', 'Normal', 'Low'];
+  readonly userProfile = computed(() => this.userService.profile());
+
+  readonly userInitials = computed(() => {
+    const p = this.userProfile();
+    if (!p) return '?';
+    return `${p.firstName?.[0] ?? ''}${p.lastName?.[0] ?? ''}`.toUpperCase();
+  });
+
+  // Projets de l'utilisateur pour la sidebar
+  readonly allProjects = computed(() =>
+    this.projects?.() ?? []
+  );
+
+  readonly currentProject = computed(() =>
+    this.dashboardContext.selectedProject()
+  );
+
   readonly sortOptions: { value: SortBy; label: string }[] = [
     { value: 'recent', label: 'Plus récents' },
     { value: 'oldest', label: 'Plus anciens' },
@@ -178,9 +201,19 @@ export class Feedbacks implements OnInit, OnDestroy {
 
     this.search$.pipe(debounceTime(300), distinctUntilChanged())
       .subscribe(() => { this.currentPage.set(1); this.load(); });
+
+    this.loadProjects();
   }
 
-  ngOnDestroy(): void { this.pollSub?.unsubscribe(); this.search$.complete(); }
+  ngOnDestroy(): void {
+    this.pollSub?.unsubscribe();
+    this.search$.complete();
+  }
+
+  selectProject(project: Project): void {
+    this.dashboardContext.setProject(project);
+  }
+
 
   // ─── URL sync ─────────────────────────────────────────────────────────────
   private syncUrl(): void {
@@ -193,7 +226,9 @@ export class Feedbacks implements OnInit, OnDestroy {
   }
 
   // ─── Chargement ───────────────────────────────────────────────────────────
-  get projectId(): string { return this.dashboardContext.selectedProject()?.id ?? ''; }
+  get projectId(): string {
+    return this.dashboardContext.selectedProject()?.id ?? '';
+  }
 
   load(): void {
     if (!this.projectId) {
@@ -229,12 +264,28 @@ export class Feedbacks implements OnInit, OnDestroy {
         this.loading.set(false);
         this.startPollingIfNeeded();
       },
-      error: () => { this.error.set('Impossible de charger les feedbacks.'); this.loading.set(false); }
+      error: () => {
+        this.error.set('Impossible de charger les feedbacks.');
+        this.loading.set(false);
+      }
+    });
+  }
+
+  private loadProjects(): void {
+    this.loading.set(true);
+    this.projectsService.getAll().subscribe({
+      next: result => {
+        this.projects.set(result.data);
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false)
     });
   }
 
   private updateKanbanLists(feedbacks: Feedback[]): void {
     this.todoList.set(feedbacks.filter(f => f.status === 'Todo'));
+    //this.inReviewList.set(feedbacks.filter(f => f.status === 'InReview'));
+    //this.plannedList.set(feedbacks.filter(f => f.status === 'Planned'));
     this.inProgressList.set(feedbacks.filter(f => f.status === 'InProgress'));
     this.doneList.set(feedbacks.filter(f => f.status === 'Done'));
   }
@@ -249,16 +300,15 @@ export class Feedbacks implements OnInit, OnDestroy {
     let pollCount = 0;
     const MAX_POLLS = 40;
     const filters: FeedbackFilters = {
-      search: this.searchValue(), category: this.categoryFilter() || undefined,
-      priority: this.priorityFilter() || undefined, status: this.statusFilter() || undefined,
-      sortBy: this.sortBy(), page: this.currentPage(), pageSize: this.pageSize,
+      search: this.searchValue(), sortBy: this.sortBy(),
+      page: this.currentPage(), pageSize: this.pageSize,
     };
 
     this.pollSub = interval(3000).pipe(
       switchMap(() => this.service.getAll(this.projectId, filters)),
-      takeWhile(result => {
+      takeWhile(r => {
         pollCount++;
-        return result.data.some(
+        return r.data.some(
           f => f.aiAnalysisStatus === 'Pending' || f.aiAnalysisStatus === 'Processing'
         ) && pollCount < MAX_POLLS;
       }, true)
@@ -277,6 +327,16 @@ export class Feedbacks implements OnInit, OnDestroy {
   }
 
   // ─── CDK Drag & Drop ──────────────────────────────────────────────────────
+  getListForStatus(status: FeedbackStatus): Feedback[] {
+    switch (status) {
+      case 'Todo': return this.todoList();
+      //case 'InReview':   return this.inReviewList();
+      //case 'Planned':    return this.plannedList();
+      case 'InProgress': return this.inProgressList();
+      case 'Done': return this.doneList();
+    }
+  }
+
   onDrop(event: CdkDragDrop<Feedback[]>, targetStatus: FeedbackStatus): void {
     if (event.previousContainer === event.container) {
       moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
@@ -297,7 +357,10 @@ export class Feedbacks implements OnInit, OnDestroy {
 
     this.service.updateStatus(this.projectId, fb.id, targetStatus).subscribe({
       error: () => {
-        transferArrayItem(event.container.data, event.previousContainer.data, event.currentIndex, event.previousIndex);
+        transferArrayItem(
+          event.container.data, event.previousContainer.data,
+          event.currentIndex, event.previousIndex
+        );
         this.feedbacks.update(list =>
           list.map(f => f.id === fb.id ? { ...f, status: prevStatus } : f)
         );
@@ -307,10 +370,12 @@ export class Feedbacks implements OnInit, OnDestroy {
   }
 
   // ─── Filtres ──────────────────────────────────────────────────────────────
-  onSearch(value: string): void { this.searchValue.set(value); this.search$.next(value); }
+  onSearch(value: string): void {
+    this.searchValue.set(value); this.search$.next(value);
+  }
 
-  setStatusFilter(value: FeedbackStatus | ''): void {
-    this.statusFilter.set(value); this.currentPage.set(1); this.syncUrl(); this.load();
+  setStatusFilter(status: FeedbackStatus | ''): void {
+    this.statusFilter.set(status); this.currentPage.set(1); this.syncUrl(); this.load();
   }
 
   onCategoryChange(value: string): void {
@@ -336,9 +401,9 @@ export class Feedbacks implements OnInit, OnDestroy {
     this.currentPage.set(1); this.syncUrl(); this.load();
   }
 
-  toggleActionFilter(): void { this.filterAction.update(v => !v); this.currentPage.set(1); this.load(); }
-
-  onSentimentChange(value: string): void { this.filterSentiment.set(value); this.currentPage.set(1); this.load(); }
+  toggleActionFilter(): void {
+    this.filterAction.update(v => !v); this.currentPage.set(1); this.load();
+  }
 
   clearFilters(): void {
     this.searchValue.set(''); this.statusFilter.set(''); this.categoryFilter.set('');
@@ -347,32 +412,24 @@ export class Feedbacks implements OnInit, OnDestroy {
     this.currentPage.set(1); this.syncUrl(); this.load();
   }
 
-  // ─── Helpers ──────────────────────────────────────────────────────────────
-  getListForStatus(status: FeedbackStatus): Feedback[] {
-    if (status === 'Todo') return this.todoList();
-    if (status === 'InProgress') return this.inProgressList();
-    return this.doneList();
-  }
-
-  getDropData(status: FeedbackStatus): Feedback[] {
-    return this.getListForStatus(status);
+  // ─── Helpers visuels ──────────────────────────────────────────────────────
+  getTagClass(category: string): string {
+    const map: Record<string, string> = {
+      Bug: 'tag-bug', FeatureRequest: 'tag-feat',
+      Question: 'tag-quest', Uncategorized: 'tag-other',
+    };
+    return map[category] ?? 'tag-other';
   }
 
   getCategoryLabel(cat: string): string {
     const map: Record<string, string> = {
-      Bug: 'Bug', FeatureRequest: 'Fonctionnalité', Question: 'Question', Uncategorized: 'Autre',
+      Bug: 'Bug', FeatureRequest: 'Fonctionnalité',
+      Question: 'Question', Uncategorized: 'Autre',
     };
     return map[cat] ?? cat;
   }
 
-  getCategoryClass(cat: string): string {
-    const map: Record<string, string> = {
-      Bug: 'tag-bug', FeatureRequest: 'tag-feat', Question: 'tag-quest', Uncategorized: 'tag-other',
-    };
-    return map[cat] ?? 'tag-other';
-  }
-
-  getPriorityClass(priority: string): string {
+  getPriorityBarClass(priority: string): string {
     const map: Record<string, string> = {
       Critical: 'pb-crit', High: 'pb-high', Normal: 'pb-med', Low: 'pb-low',
     };
@@ -393,41 +450,62 @@ export class Feedbacks implements OnInit, OnDestroy {
     return map[priority] ?? priority;
   }
 
-  getSentimentClass(sentiment: string): string {
+  getSentimentClass(s: string): string {
     const map: Record<string, string> = {
-      Positive: 'sent-pos', Neutral: 'sent-neu', Negative: 'sent-neg', Frustrated: 'sent-frus',
+      Positive: 'pos', Neutral: 'neu', Negative: 'neg', Frustrated: 'neg',
     };
-    return map[sentiment] ?? 'sent-neu';
+    return map[s] ?? 'neu';
   }
 
-  getSentimentLabel(sentiment: string): string {
+  getSentimentIcon(s: string): string {
     const map: Record<string, string> = {
-      Positive: 'Positif', Neutral: 'Neutre', Negative: 'Négatif', Frustrated: 'Frustré',
+      Positive: 'ti-mood-smile', Neutral: 'ti-mood-neutral',
+      Negative: 'ti-mood-sad', Frustrated: 'ti-mood-sad',
     };
-    return map[sentiment] ?? sentiment;
+    return map[s] ?? 'ti-mood-neutral';
   }
 
-  getUserInitials(index: number): string {
-    const initials = ['SA', 'MR', 'LC', 'PD', 'AM', 'TL', 'RK', 'NF', 'CB', 'JL'];
-    return initials[index % initials.length];
+  getSentimentLabel(s: string): string {
+    const map: Record<string, string> = {
+      Positive: 'Positif', Neutral: 'Neutre',
+      Negative: 'Négatif', Frustrated: 'Frustré',
+    };
+    return map[s] ?? s;
+  }
+
+  getRelativeDate(dateStr: string): string {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const hours = Math.floor(diff / 3_600_000);
+    const days = Math.floor(diff / 86_400_000);
+    if (hours < 1) return "à l'instant";
+    if (hours < 24) return `il y a ${hours}h`;
+    if (days === 1) return 'hier';
+    return `il y a ${days}j`;
+  }
+
+  getAvatarBg(index: number): string {
+    const colors = [
+      '#DBEAFE', '#D1FAE5', '#FEF3C7', '#EDE9FE',
+      '#FCE7F3', '#E0E7FF', '#F1F5F9', '#FEF9C3',
+    ];
+    return colors[index % colors.length];
   }
 
   getAvatarColor(index: number): string {
     const colors = [
-      '#DBEAFE', '#D1FAE5', '#FEF3C7', '#EDE9FE',
-      '#FCE7F3', '#E0E7FF', '#FEF9C3', '#F1F5F9'
+      '#1D4ED8', '#065F46', '#92400E', '#5B21B6',
+      '#9D174D', '#3730A3', '#475569', '#713F12',
     ];
     return colors[index % colors.length];
   }
 
-  getAvatarTextColor(index: number): string {
-    const colors = [
-      '#1E40AF', '#065F46', '#92400E', '#5B21B6',
-      '#9D174D', '#3730A3', '#713F12', '#475569'
-    ];
-    return colors[index % colors.length];
+  getInitials(feedback: Feedback, index: number): string {
+    // Utilise les initiales du contenu si pas de nom client
+    const names = ['SA', 'MR', 'LC', 'PD', 'AM', 'TL', 'RK', 'NF', 'CB', 'JL'];
+    return names[index % names.length];
   }
 
+  // ─── Drawer ───────────────────────────────────────────────────────────────
   openDrawer(feedback: Feedback): void {
     this.selectedFeedback.set(feedback);
     this.drawerOpen.set(true);
@@ -443,11 +521,12 @@ export class Feedbacks implements OnInit, OnDestroy {
       list.map(f => f.id === event.id ? { ...f, status: event.status } : f)
     );
     this.updateKanbanLists(this.feedbacks());
-    this.selectedFeedback.update(f => f?.id === event.id ? { ...f, status: event.status } : f);
+    this.selectedFeedback.update(f =>
+      f?.id === event.id ? { ...f, status: event.status } : f
+    );
   }
 
-  trackById(_: number, item: Feedback): string { return item.id; }
-
+  // ─── Export ───────────────────────────────────────────────────────────────
   exportCsv(): void {
     if (this.exporting()) return;
     this.exporting.set(true);
@@ -459,16 +538,20 @@ export class Feedbacks implements OnInit, OnDestroy {
       next: blob => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = `feedbacks_${new Date().toISOString().slice(0, 10)}.csv`;
-        a.click(); URL.revokeObjectURL(url);
+        a.href = url;
+        a.download = `feedbacks_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
         this.exporting.set(false);
       },
       error: err => {
         this.exporting.set(false);
         this.error.set(err.status === 403
-          ? "L'export CSV est disponible à partir du plan Pro."
-          : 'Erreur lors de l\'export.');
+          ? "Export CSV disponible à partir du plan Pro."
+          : "Erreur lors de l'export.");
       }
     });
   }
+
+  trackById(_: number, item: Feedback): string { return item.id; }
 }

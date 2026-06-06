@@ -7,15 +7,22 @@ import { TrendsData } from './trends.types';
 @Injectable({ providedIn: 'root' })
 export class TrendsService {
   private readonly http = inject(HttpClient);
-  private readonly API  = environment.apiUrl;
+  private readonly API = environment.apiUrl;
 
-  get(days: number, projectId?: string): Observable<TrendsData> {
-    let params = new HttpParams().set('days', days);
-    if (projectId) params = params.set('projectId', projectId);
+  getTrends(params: {
+    days: number;
+    projectId?: string;
+    category?: string;
+    priority?: string;
+  }): Observable<TrendsData> {
+    let httpParams = new HttpParams().set('days', params.days.toString());
+    if (params.projectId) httpParams = httpParams.set('projectId', params.projectId);
+    if (params.category) httpParams = httpParams.set('category', params.category);
+    if (params.priority) httpParams = httpParams.set('priority', params.priority);
 
     return this.http.get<TrendsData>(
       `${this.API}/trends`,
-      { params, withCredentials: true }
+      { params: httpParams, withCredentials: true }
     );
   }
 }

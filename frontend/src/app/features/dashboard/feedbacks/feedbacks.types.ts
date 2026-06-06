@@ -1,3 +1,4 @@
+//export type FeedbackStatus = 'Todo' | 'InReview' | 'Planned' | 'InProgress' | 'Done';
 export type FeedbackStatus = 'Todo' | 'InProgress' | 'Done';
 export type FeedbackPriority = 'Low' | 'Normal' | 'High' | 'Critical';
 export type FeedbackCategory = 'Bug' | 'FeatureRequest' | 'Question' | 'Uncategorized';

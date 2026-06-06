@@ -1,35 +1,74 @@
-export type Period = 7 | 30 | 90;
-export type ChartType = 'bar' | 'line';
-
-export interface TrendPoint {
-  date:  string;
+export interface SeriesPoint {
+  date: string;
   count: number;
 }
 
-export interface CategoryBreakdown {
-  category:   string;
-  count:      number;
-  percentage: number;
+export interface VolumeEvolution {
+  received: SeriesPoint[];
+  resolved: SeriesPoint[];
+  currentTotal: number;
+  previousTotal: number;
+  growthPercent: number | null;
+  averagePerDay: number;
+  currentResolved: number;
+  previousResolved: number;
+  resolvedGrowthPercent: number | null;
 }
 
-export interface PriorityBreakdown {
-  priority:   string;
-  count:      number;
-  percentage: number;
+export interface CategoryEvolution {
+  category: string;
+  currentCount: number;
+  previousCount: number;
+  currentPercent: number;
+  delta: number | null;
+  isEmerging: boolean;
 }
 
-export interface TrendSummary {
-  totalPeriod:   number;
-  totalPrevious: number;
-  growthRate:    number;
-  avgPerDay:     number;
-  peakCount:     number;
-  peakDate:      string;
+export interface ProjectEvolution {
+  projectId: string;
+  projectName: string;
+  currentCount: number;
+  previousCount: number;
+  growthPercent: number | null;
+}
+
+export interface BacklogHealth {
+  openCount: number;
+  resolvedCount: number;
+  resolutionRatio: number;
+  averageAgeDays: number;
+  oldestOpenDays: number;
+}
+
+export interface ResolutionMetrics {
+  averageResolutionDays: number | null;
+  previousAverageResolutionDays: number | null;
+  delta: number | null;
+  dailyAverages: SeriesPoint[];
+}
+
+export interface PriorityPoint {
+  date: string;
+  critical: number;
+  high: number;
+  normal: number;
+  low: number;
+}
+
+export interface AutoAlert {
+  alertType: 'danger' | 'warning' | 'info';
+  message: string;
 }
 
 export interface TrendsData {
-  dailyVolume:       TrendPoint[];
-  categoryBreakdown: CategoryBreakdown[];
-  priorityBreakdown: PriorityBreakdown[];
-  summary:           TrendSummary;
+  volume: VolumeEvolution;
+  categories: CategoryEvolution[];
+  emergingCategories: CategoryEvolution[];
+  topProjects: ProjectEvolution[];
+  backlog: BacklogHealth;
+  resolution: ResolutionMetrics;
+  priorityTrend: PriorityPoint[];
+  alerts: AutoAlert[];
 }
+
+export type PeriodDays = 7 | 30 | 90 | 180 | 365;

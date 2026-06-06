@@ -1,410 +1,516 @@
-<div class="fb-page">
+<div class="app">
 
   <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════════ -->
-  <nav class="fb-sidebar" aria-label="Navigation feedbacks">
+  <nav class="sidebar" aria-label="Navigation feedbacks">
 
+    <div class="sb-logo">
+      <div class="sb-logo-dot">
+        <i class="ti ti-message-dots" aria-hidden="true"></i>
+      </div>
+      <span class="sb-logo-name">FeedxAi</span>
+    </div>
+
+    <!-- Vues -->
     <div class="sb-section">
       <div class="sb-label">Vues</div>
-      <button class="sb-item" [class.sb-item--active]="!criticalMode() && !statusFilter()" (click)="clearFilters()">
+
+      <button class="sb-item" [class.active]="!criticalMode() && !statusFilter() && !priorityFilter()"
+        (click)="clearFilters()">
         <i class="ti ti-layout-kanban" aria-hidden="true"></i>
         Tous les feedbacks
         <span class="sb-badge">{{ totalCount() }}</span>
       </button>
-      <button class="sb-item" [class.sb-item--active]="criticalMode()" (click)="toggleCriticalMode()">
+
+      <button class="sb-item" [class.active]="criticalMode()" (click)="toggleCriticalMode()">
         <i class="ti ti-flame" aria-hidden="true"></i>
         Critiques
         @if (criticalCount() > 0) {
-        <span class="sb-badge sb-badge--hot">{{ criticalCount() }}</span>
+        <span class="sb-badge hot">{{ criticalCount() }}</span>
+        } @else {
+        <span class="sb-badge">0</span>
         }
       </button>
-      <button class="sb-item" [class.sb-item--active]="statusFilter() === 'Todo' && !priorityFilter()"
-        (click)="setStatusFilter(''); onPriorityChange('High')">
+
+      <button class="sb-item" [class.active]="pendingAiCount() > 0 && showAiFilters()"
+        (click)="showAiFilters.update(v => !v)">
+        <i class="ti ti-sparkles" aria-hidden="true"></i>
+        Non analysés
+        <span class="sb-badge">{{ pendingAiCount() }}</span>
+      </button>
+
+      <button class="sb-item" [class.active]="priorityFilter() === 'High' || priorityFilter() === 'Critical'"
+        (click)="onPriorityChange('High')">
         <i class="ti ti-star" aria-hidden="true"></i>
         Haute priorité
         <span class="sb-badge">{{ highPriorityCount() }}</span>
       </button>
-      <button class="sb-item" [class.sb-item--active]="pendingAiCount() > 0 && showAiFilters()"
-        (click)="showAiFilters.update(v => !v)">
-        <i class="ti ti-sparkles" aria-hidden="true"></i>
-        Non analysés
-        @if (pendingAiCount() > 0) {
-        <span class="sb-badge">{{ pendingAiCount() }}</span>
-        }
-      </button>
     </div>
 
     <div class="sb-divider"></div>
 
+    <!-- Par statut -->
     <div class="sb-section">
       <div class="sb-label">Par statut</div>
-      <button class="sb-item" [class.sb-item--active]="statusFilter() === 'Todo'" (click)="setStatusFilter('Todo')">
-        <span class="sb-dot sb-dot--new"></span>Nouveau
-        <span class="sb-badge">{{ todoList().length }}</span>
+
+      @for (col of columns; track col.status) {
+      <button class="sb-item" [class.active]="statusFilter() === col.status" (click)="setStatusFilter(col.status)">
+        <span class="sb-dot" [style.background]="col.dotColor"></span>
+        {{ col.label }}
+        <span class="sb-badge">{{ getListForStatus(col.status).length }}</span>
       </button>
-      <button class="sb-item" [class.sb-item--active]="statusFilter() === 'InProgress'"
-        (click)="setStatusFilter('InProgress')">
-        <span class="sb-dot sb-dot--prog"></span>En cours
-        <span class="sb-badge">{{ inProgressList().length }}</span>
-      </button>
-      <button class="sb-item" [class.sb-item--active]="statusFilter() === 'Done'" (click)="setStatusFilter('Done')">
-        <span class="sb-dot sb-dot--done"></span>Terminé
-        <span class="sb-badge">{{ doneList().length }}</span>
-      </button>
+      }
     </div>
 
     <div class="sb-divider"></div>
 
+    <!-- Projets -->
     <div class="sb-section">
-      <div class="sb-label">Catégories</div>
-      @for (cat of categories; track cat) {
-      <button class="sb-item" [class.sb-item--active]="categoryFilter() === cat" (click)="onCategoryChange(cat)">
-        <i class="ti ti-tag" aria-hidden="true"></i>
-        {{ getCategoryLabel(cat) }}
+      <div class="sb-label">Projets</div>
+
+      @for (project of projects(); track project.id) {
+      <button class="sb-item" [class.active]="currentProject()?.id === project.id"
+        (click)="selectProject(project)">
+        <i class="ti ti-circle-dot" aria-hidden="true"></i>
+        {{ project.name }}
       </button>
       }
+
+      <button class="sb-item" routerLink="/dashboard/projects">
+        <i class="ti ti-plus" aria-hidden="true"></i>
+        <span style="color:var(--color-text-tertiary)">Nouveau projet</span>
+      </button>
     </div>
 
   </nav>
 
   <!-- ══ ZONE PRINCIPALE ══════════════════════════════════════════════════════ -->
-  <div class="fb-main">
+  <div class="main">
 
     <!-- ── Topbar ──────────────────────────────────────────────────────────── -->
-    <header class="fb-topbar">
-      <div class="fb-topbar__left">
-        <h1 class="fb-topbar__title">Feedbacks</h1>
-        <span class="fb-topbar__count">{{ totalCount() }}</span>
-        @if (hasActiveFilters()) {
-        <span class="fb-topbar__filtered">filtré</span>
-        }
-      </div>
+    <div class="topbar">
+      <span class="topbar-title">Feedbacks</span>
+      <span class="topbar-count">{{ totalCount() }}</span>
 
-      <div class="fb-search">
+      <div class="search-wrap">
         <i class="ti ti-search" aria-hidden="true"></i>
         <input type="search" placeholder="Rechercher…" [value]="searchValue()"
           (input)="onSearch($any($event.target).value)" aria-label="Rechercher un feedback">
       </div>
 
-      <div class="fb-topbar__actions">
-        @if (isPro()) {
-        <button class="tb-btn tb-btn--ai" (click)="showAiFilters.update(v => !v)">
-          <i class="ti ti-sparkles" aria-hidden="true"></i>Filtres IA
-          @if (filterAction() || filterSentiment()) {
-          <span class="tb-btn__dot"></span>
-          }
-        </button>
-        }
-        <select class="tb-select" [value]="sortBy()" (change)="onSortChange($any($event.target).value)"
+      <div class="tb-actions">
+
+        <!-- Tri -->
+        <select class="btn btn-select" [value]="sortBy()" (change)="onSortChange($any($event.target).value)"
           aria-label="Trier par">
           @for (opt of sortOptions; track opt.value) {
           <option [value]="opt.value">{{ opt.label }}</option>
           }
         </select>
-        <button class="tb-btn" [disabled]="exporting() || totalCount() === 0" (click)="exportCsv()">
-          <i class="ti ti-download" aria-hidden="true"></i>
-          {{ exporting() ? 'Export…' : 'Exporter' }}
-        </button>
-        @if (hasActiveFilters()) {
-        <button class="tb-btn tb-btn--reset" (click)="clearFilters()">
-          <i class="ti ti-x" aria-hidden="true"></i>Réinitialiser
+
+        <!-- Filtres IA -->
+        @if (isPro()) {
+        <button class="btn btn-ai" [class.btn-ai--active]="showAiFilters()" (click)="showAiFilters.update(v => !v)">
+          <i class="ti ti-sparkles" aria-hidden="true"></i>
+          Synthèse IA
+          @if (filterAction() || filterSentiment()) {
+          <span class="btn-dot"></span>
+          }
         </button>
         }
+
+        <!-- Export -->
+        <button class="btn" [disabled]="exporting() || totalCount() === 0" (click)="exportCsv()">
+          @if (exporting()) {
+          <i class="ti ti-loader-2" style="animation:spin .8s linear infinite" aria-hidden="true"></i>
+          Export…
+          } @else {
+          <i class="ti ti-download" aria-hidden="true"></i>
+          Exporter
+          }
+        </button>
+
+        <!-- Créer feedback -->
+        <button class="btn btn-primary">
+          <i class="ti ti-plus" aria-hidden="true"></i>
+          Feedback
+        </button>
+
+        <!-- Réinitialiser filtres -->
+        @if (hasActiveFilters()) {
+        <button class="btn btn-reset" (click)="clearFilters()" title="Réinitialiser les filtres">
+          <i class="ti ti-x" aria-hidden="true"></i>
+        </button>
+        }
+
+        <!-- Avatar utilisateur -->
+        <div class="avatar" [title]="userProfile()?.firstName + ' ' + userProfile()?.lastName">
+          {{ userInitials() }}
+        </div>
       </div>
-    </header>
+    </div>
 
     <!-- ── KPI Row ─────────────────────────────────────────────────────────── -->
-    <div class="fb-kpis">
-      <div class="kpi-card">
-        <div class="kpi-card__icon kpi-card__icon--blue">
-          <i class="ti ti-messages" aria-hidden="true"></i>
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-top">
+          <div class="kpi-icon blue"><i class="ti ti-messages" aria-hidden="true"></i></div>
+          <span class="kpi-trend up">
+            <i class="ti ti-trending-up" aria-hidden="true"></i>Total
+          </span>
         </div>
-        <div class="kpi-card__body">
-          <div class="kpi-card__value">{{ totalCount() }}</div>
-          <div class="kpi-card__label">Total feedbacks</div>
-        </div>
+        <div class="kpi-value">{{ totalCount() }}</div>
+        <div class="kpi-label">Total feedbacks</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-card__icon kpi-card__icon--purple">
-          <i class="ti ti-calendar-week" aria-hidden="true"></i>
+
+      <div class="kpi">
+        <div class="kpi-top">
+          <div class="kpi-icon purple"><i class="ti ti-calendar-week" aria-hidden="true"></i></div>
+          <span class="kpi-trend up">
+            <i class="ti ti-trending-up" aria-hidden="true"></i>+{{ newThisWeek() }}
+          </span>
         </div>
-        <div class="kpi-card__body">
-          <div class="kpi-card__value">{{ newThisWeek() }}</div>
-          <div class="kpi-card__label">Cette semaine</div>
-        </div>
+        <div class="kpi-value">{{ newThisWeek() }}</div>
+        <div class="kpi-label">Cette semaine</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-card__icon kpi-card__icon--amber">
-          <i class="ti ti-sparkles" aria-hidden="true"></i>
+
+      <div class="kpi">
+        <div class="kpi-top">
+          <div class="kpi-icon amber"><i class="ti ti-sparkles" aria-hidden="true"></i></div>
+          <span class="kpi-trend" style="color:var(--color-text-tertiary)">
+            {{ totalCount() > 0 ? ((analyzedCount() / totalCount()) * 100 | number:'1.0-0') : 0 }}%
+          </span>
         </div>
-        <div class="kpi-card__body">
-          <div class="kpi-card__value">{{ feedbacks().length - pendingAiCount() }}</div>
-          <div class="kpi-card__label">Analysés par IA</div>
-        </div>
+        <div class="kpi-value">{{ analyzedCount() }}</div>
+        <div class="kpi-label">Analysés par IA</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-card__icon kpi-card__icon--red">
-          <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+
+      <div class="kpi">
+        <div class="kpi-top">
+          <div class="kpi-icon teal"><i class="ti ti-alert-triangle" aria-hidden="true"></i></div>
+          <span class="kpi-trend down">
+            <i class="ti ti-trending-down" aria-hidden="true"></i>{{ highPriorityCount() }}
+          </span>
         </div>
-        <div class="kpi-card__body">
-          <div class="kpi-card__value">{{ highPriorityCount() }}</div>
-          <div class="kpi-card__label">Haute priorité</div>
-        </div>
+        <div class="kpi-value">{{ highPriorityCount() }}</div>
+        <div class="kpi-label">Haute priorité</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-card__icon kpi-card__icon--green">
-          <i class="ti ti-circle-check" aria-hidden="true"></i>
+
+      <div class="kpi">
+        <div class="kpi-top">
+          <div class="kpi-icon green"><i class="ti ti-circle-check" aria-hidden="true"></i></div>
+          <span class="kpi-trend up">
+            <i class="ti ti-trending-up" aria-hidden="true"></i>{{ doneList().length }}
+          </span>
         </div>
-        <div class="kpi-card__body">
-          <div class="kpi-card__value">{{ doneCount() }}</div>
-          <div class="kpi-card__label">Terminés</div>
-        </div>
+        <div class="kpi-value">{{ doneList().length }}</div>
+        <div class="kpi-label">Terminés</div>
       </div>
     </div>
 
     <!-- ── Flow bar ────────────────────────────────────────────────────────── -->
     <div class="flow-bar" role="navigation" aria-label="Flux de travail">
-      @for (step of flowSteps; track step.key; let last = $last) {
-      <button class="flow-step" [class.flow-step--active]="activeFlowStep() === step.key"
-        (click)="activeFlowStep.set(step.key)">
-        <i class="ti {{ step.icon }}" aria-hidden="true"></i>
-        {{ step.label }}
+      <button class="flow-step" [class.active]="activeFlow() === 'collect'" (click)="activeFlow.set('collect')">
+        <i class="ti ti-database" aria-hidden="true"></i>Collecter
       </button>
-      @if (!last) {
-      <span class="flow-arr" aria-hidden="true">›</span>
-      }
-      }
+      <span class="flow-arr">›</span>
+      <button class="flow-step" [class.active]="activeFlow() === 'analyze'" (click)="activeFlow.set('analyze')">
+        <i class="ti ti-sparkles" aria-hidden="true"></i>Analyser IA
+      </button>
+      <span class="flow-arr">›</span>
+      <button class="flow-step" [class.active]="activeFlow() === 'prioritize'" (click)="activeFlow.set('prioritize')">
+        <i class="ti ti-sort-descending" aria-hidden="true"></i>Prioriser
+      </button>
+      <span class="flow-arr">›</span>
+      <button class="flow-step" [class.active]="activeFlow() === 'build'" (click)="activeFlow.set('build')">
+        <i class="ti ti-hammer" aria-hidden="true"></i>Construire
+      </button>
     </div>
 
-    <!-- ── Filtres IA avancés ──────────────────────────────────────────────── -->
+    <!-- ── Filtres IA ──────────────────────────────────────────────────────── -->
     @if (showAiFilters() && isPro()) {
-    <div class="ai-filters">
+    <div class="ai-filters-bar">
       <label class="ai-filter-check">
         <input type="checkbox" [checked]="filterAction()" (change)="toggleActionFilter()">
-        <i class="ti ti-bolt" aria-hidden="true"></i>Action requise
+        <i class="ti ti-bolt" aria-hidden="true"></i>
+        Action requise
       </label>
-      <select class="tb-select" [value]="filterSentiment()" (change)="onSentimentChange($any($event.target).value)">
+      <select class="btn btn-select-sm" [value]="filterSentiment()"
+        (change)="filterSentiment.set($any($event.target).value); load()">
         <option value="">Tous les sentiments</option>
-        <option value="Frustrated">Frustré</option>
-        <option value="Negative">Négatif</option>
-        <option value="Neutral">Neutre</option>
-        <option value="Positive">Positif</option>
+        <option value="Frustrated">😤 Frustré</option>
+        <option value="Negative">😞 Négatif</option>
+        <option value="Neutral">😐 Neutre</option>
+        <option value="Positive">😊 Positif</option>
       </select>
-      <select class="tb-select" [value]="priorityFilter()" (change)="onPriorityChange($any($event.target).value)">
-        <option value="">Toutes les priorités</option>
-        @for (pri of priorities; track pri) {
-        <option [value]="pri">{{ getPriorityLabel(pri) }}</option>
-        }
-      </select>
-    </div>
-    }
-
-    <!-- ── Loading ────────────────────────────────────────────────────────── -->
-    @if (loading()) {
-    <div class="kanban-skel">
-      @for (col of columns; track col.status) {
-      <div class="skel-col">
-        <div class="skel-header"></div>
-        @for (i of [1,2,3]; track i) {
-        <div class="skel-card"></div>
-        }
-      </div>
-      }
     </div>
     }
 
     <!-- ── Erreur ──────────────────────────────────────────────────────────── -->
     @if (error()) {
-    <div class="fb-error">
+    <div class="error-bar" role="alert">
       <i class="ti ti-alert-circle" aria-hidden="true"></i>
       {{ error() }}
       <button (click)="load()">Réessayer</button>
     </div>
     }
 
-    <!-- ── Kanban CDK ──────────────────────────────────────────────────────── -->
-    @if (!loading() && !error()) {
-    <div class="kanban" cdkDropListGroup>
-      @for (col of columns; track col.status; let colIdx = $index) {
-      <div class="kanban-col {{ col.colorClass }}">
+    <!-- ── Zone content : kanban + panneau IA ─────────────────────────────── -->
+    <div class="content">
 
-        <div class="kanban-col__header">
-          <div class="kanban-col__title">
-            <span class="kanban-col__dot"></span>
-            {{ col.label }}
+      <!-- Kanban CDK -->
+      @if (loading()) {
+      <div class="kanban-wrap">
+        @for (col of columns; track col.status) {
+        <div class="col" style="opacity:.4">
+          <div class="col-header">
+            <div class="col-title">
+              <span class="col-dot" [style.background]="col.dotColor"></span>
+              {{ col.label }}
+            </div>
+            <span class="col-count">—</span>
           </div>
-          <span class="kanban-col__count">{{ getListForStatus(col.status).length }}</span>
-        </div>
-
-        <div class="kanban-col__cards" cdkDropList [cdkDropListData]="getDropData(col.status)"
-          [id]="'col-' + col.status" (cdkDropListDropped)="onDrop($event, col.status)">
-
-          @if (getListForStatus(col.status).length === 0) {
-          <div class="kanban-empty">
-            <i class="ti ti-inbox" aria-hidden="true"></i>
-            <span>Aucun feedback</span>
-          </div>
-          }
-
-          @for (fb of getListForStatus(col.status); track trackById($index, fb); let i = $index) {
-          <article class="fb-card" [class.fb-card--done]="fb.status === 'Done'" cdkDrag [cdkDragData]="fb"
-            (click)="openDrawer(fb)">
-
-            <div class="kanban-placeholder" *cdkDragPlaceholder></div>
-            <div class="fb-card fb-card--preview" *cdkDragPreview>
-              <p class="fb-card__title-preview">{{ fb.aiSummary || fb.content }}</p>
-            </div>
-
-            <!-- Barre de priorité -->
-            <div class="fb-card__pbar {{ getPriorityClass(fb.priority) }}"></div>
-
-            <!-- En-tête carte -->
-            <div class="fb-card__top">
-              <div class="fb-card__avatar" [style.background]="getAvatarColor(i)" [style.color]="getAvatarTextColor(i)">
-                {{ getUserInitials(i) }}
-              </div>
-              <span class="fb-card__author">Utilisateur</span>
-              <span class="fb-card__date">{{ fb.createdAt | date:'dd MMM' }}</span>
-            </div>
-
-            <!-- Badge IA -->
-            @if (fb.aiAnalysisStatus !== 'Completed') {
-            <div class="fb-card__ai-status">
-              @switch (fb.aiAnalysisStatus) {
-              @case ('Pending') {
-              <span class="ai-pill ai-pill--pending">
-                <span class="ai-dot"></span>En attente
-              </span>
-              }
-              @case ('Processing') {
-              <span class="ai-pill ai-pill--processing">
-                <span class="ai-spinner"></span>Analyse…
-              </span>
-              }
-              @case ('Failed') {
-              <span class="ai-pill ai-pill--failed">
-                <i class="ti ti-alert-triangle" aria-hidden="true"></i>Échec IA
-              </span>
-              }
-              @default {}
-              }
-            </div>
+          <div class="cards">
+            @for (i of [1,2]; track i) {
+            <div class="card card-skel"></div>
             }
-
-            <!-- Titre / résumé IA -->
-            <p class="fb-card__summary">{{ fb.aiSummary || fb.content }}</p>
-
-            <!-- Tags -->
-            <div class="fb-card__tags">
-              <span class="fb-tag {{ getCategoryClass(fb.category) }}">
-                {{ getCategoryLabel(fb.category) }}
-              </span>
-              <span class="fb-tag {{ getPriorityTagClass(fb.priority) }}">
-                {{ getPriorityLabel(fb.priority) }}
-              </span>
-              @if (fb.actionRequired) {
-              <span class="fb-tag fb-tag--action">
-                <i class="ti ti-bolt" aria-hidden="true"></i>Action
-              </span>
-              }
-            </div>
-
-            <!-- Footer -->
-            <div class="fb-card__footer">
-              @if (fb.sentiment) {
-              <span class="fb-sentiment {{ getSentimentClass(fb.sentiment) }}">
-                {{ getSentimentLabel(fb.sentiment) }}
-              </span>
-              }
-              @if (fb.priorityScore !== null && fb.priorityScore !== undefined) {
-              <span class="fb-score" [class.fb-score--high]="(fb.priorityScore ?? 0) >= 76">
-                {{ fb.priorityScore }}/100
-              </span>
-              }
-              @if (fb.keyTopics && fb.keyTopics.length > 0) {
-              <div class="fb-topics">
-                @for (t of fb.keyTopics.slice(0, 2); track t) {
-                <span class="fb-topic">{{ t }}</span>
-                }
-              </div>
-              }
-            </div>
-
-          </article>
-          }
-
-        </div>
-      </div>
-      }
-    </div>
-    }
-
-  </div>
-
-  <!-- ══ PANNEAU IA ════════════════════════════════════════════════════════════ -->
-  <aside class="ai-panel" aria-label="Analyse IA">
-    <div class="ai-panel__header">
-      <i class="ti ti-sparkles" aria-hidden="true"></i>
-      <span class="ai-panel__title">Analyse IA</span>
-    </div>
-    <p class="ai-panel__sub">
-      Basé sur {{ feedbacks().length - pendingAiCount() }} feedbacks analysés
-    </p>
-
-    @if (topTopics().length > 0) {
-    <div class="ai-insight">
-      <div class="ai-insight__label">Sujets les + mentionnés</div>
-      <div class="ai-insight__content">
-        @for (t of topTopics(); track t.topic) {
-        <div class="ai-topic-row">
-          <span class="ai-topic-name">{{ t.topic }}</span>
-          <span class="ai-topic-count">{{ t.count }}</span>
+          </div>
         </div>
         }
       </div>
-    </div>
-    }
+      }
 
-    @if (mainFrustration()) {
-    <div class="ai-insight">
-      <div class="ai-insight__label">Principale frustration</div>
-      <div class="ai-insight__content">
-        <strong>{{ getCategoryLabel(mainFrustration()!.category) }}</strong>
-        — {{ mainFrustration()!.count }} retours frustrés
+      @if (!loading()) {
+      <div class="kanban-wrap" cdkDropListGroup>
+
+        @for (col of columns; track col.status) {
+        <div class="col {{ col.cssClass }}">
+
+          <div class="col-header">
+            <div class="col-title">
+              <span class="col-dot"></span>
+              {{ col.label }}
+            </div>
+            <span class="col-count">{{ getListForStatus(col.status).length }}</span>
+          </div>
+
+          <div class="cards" cdkDropList [cdkDropListData]="getListForStatus(col.status)" [id]="'col-' + col.status"
+            (cdkDropListDropped)="onDrop($event, col.status)">
+
+            @if (getListForStatus(col.status).length === 0) {
+            <div class="col-empty">
+              <i class="ti ti-inbox" aria-hidden="true"></i>
+              <span>Aucun feedback</span>
+            </div>
+            }
+
+            @for (fb of getListForStatus(col.status); track trackById($index, fb); let i = $index) {
+            <div class="card" [class.done-card]="fb.status === 'Done'" cdkDrag [cdkDragData]="fb"
+              (click)="openDrawer(fb)">
+
+              <!-- Placeholder drag -->
+              <div class="drag-placeholder" *cdkDragPlaceholder></div>
+
+              <!-- Preview drag -->
+              <div class="card card-preview" *cdkDragPreview>
+                <div class="card-title">{{ fb.aiSummary || fb.content }}</div>
+              </div>
+
+              <!-- Barre de priorité -->
+              <div class="priority-bar {{ getPriorityBarClass(fb.priority) }}"></div>
+
+              <!-- En-tête carte -->
+              <div class="card-top">
+                <div class="c-avatar" [style.background]="getAvatarBg(i)" [style.color]="getAvatarColor(i)">
+                  {{ getInitials(fb, i) }}
+                </div>
+                <span class="c-name">Utilisateur</span>
+                <span class="c-date">{{ getRelativeDate(fb.createdAt) }}</span>
+              </div>
+
+              <!-- Badge IA -->
+              @if (fb.aiAnalysisStatus !== 'Completed') {
+              <div style="padding:0 12px 4px">
+                @switch (fb.aiAnalysisStatus) {
+                @case ('Pending') {
+                <span class="ai-pill ai-pill--pending">
+                  <span class="ai-dot"></span>En attente IA
+                </span>
+                }
+                @case ('Processing') {
+                <span class="ai-pill ai-pill--processing">
+                  <span class="ai-spinner"></span>Analyse IA…
+                </span>
+                }
+                @case ('Failed') {
+                <span class="ai-pill ai-pill--failed">
+                  <i class="ti ti-alert-triangle" aria-hidden="true"></i>Échec IA
+                </span>
+                }
+                @default {}
+                }
+              </div>
+              }
+
+              <!-- Titre -->
+              <div class="card-title">{{ fb.aiSummary || fb.content }}</div>
+
+              <!-- Aperçu contenu -->
+              @if (fb.aiSummary) {
+              <div class="card-preview">{{ fb.content }}</div>
+              }
+
+              <!-- Tags -->
+              <div class="card-tags">
+                <span class="tag {{ getTagClass(fb.category) }}">
+                  {{ getCategoryLabel(fb.category) }}
+                </span>
+                <span class="tag {{ getPriorityTagClass(fb.priority) }}">
+                  {{ getPriorityLabel(fb.priority) }}
+                </span>
+                @if (fb.actionRequired) {
+                <span class="tag tag-action">
+                  <i class="ti ti-bolt" aria-hidden="true"></i>Action
+                </span>
+                }
+              </div>
+
+              <!-- Footer -->
+              <div class="card-footer">
+                @if (fb.sentiment) {
+                <div class="sentiment {{ getSentimentClass(fb.sentiment) }}">
+                  <i class="ti {{ getSentimentIcon(fb.sentiment) }}" aria-hidden="true"></i>
+                  {{ getSentimentLabel(fb.sentiment) }}
+                </div>
+                }
+                <div class="card-meta">
+                  @if ((fb.priorityScore ?? 0) > 0) {
+                  <div class="meta-item" title="Score IA">
+                    <i class="ti ti-chart-bar" aria-hidden="true"></i>
+                    {{ fb.priorityScore }}
+                  </div>
+                  }
+                  @if (fb.keyTopics && fb.keyTopics.length > 0) {
+                  <div class="meta-item" title="Sujets clés">
+                    <i class="ti ti-tag" aria-hidden="true"></i>
+                    {{ fb.keyTopics.length }}
+                  </div>
+                  }
+                </div>
+              </div>
+
+            </div>
+            }
+
+          </div>
+        </div>
+        }
+
       </div>
+      }
+
+      <!-- ── Panneau IA ───────────────────────────────────────────────────── -->
+      <aside class="ai-panel" aria-label="Analyse IA">
+
+        <div class="ai-panel-title">
+          <i class="ti ti-sparkles" aria-hidden="true"></i>
+          Analyse IA
+        </div>
+        <div class="ai-sub">
+          Basé sur {{ analyzedCount() }} feedback{{ analyzedCount() > 1 ? 's' : '' }} analysé{{ analyzedCount() > 1 ?
+          's' : '' }}
+        </div>
+
+        @if (topRequestedFeature()) {
+        <div class="ai-insight">
+          <div class="ai-insight-label">Fonctionnalité la + demandée</div>
+          <div class="ai-insight-value">
+            <strong>{{ topRequestedFeature()!.topic }}</strong>
+            — {{ topRequestedFeature()!.count }} mentions
+          </div>
+          <button class="ai-action" (click)="onCategoryChange('FeatureRequest')">
+            <i class="ti ti-arrow-right" aria-hidden="true"></i>
+            Voir toutes les features
+          </button>
+        </div>
+        }
+
+        @if (mainFrustration()) {
+        <div class="ai-insight">
+          <div class="ai-insight-label">Principale frustration</div>
+          <div class="ai-insight-value">
+            <strong>{{ getCategoryLabel(mainFrustration()!.category) }}</strong>
+            — {{ mainFrustration()!.count }} retours frustrés
+          </div>
+          <button class="ai-action" (click)="onCategoryChange(mainFrustration()!.category)">
+            <i class="ti ti-arrow-right" aria-hidden="true"></i>
+            Analyser en détail
+          </button>
+        </div>
+        }
+
+        @if (criticalCount() > 0) {
+        <div class="ai-insight ai-insight--urgent">
+          <div class="ai-insight-label">Action recommandée</div>
+          <div class="ai-insight-value">
+            {{ criticalCount() }} feedback{{ criticalCount() > 1 ? 's critiques' : ' critique' }}
+            à traiter en priorité.
+          </div>
+          <button class="ai-action" (click)="toggleCriticalMode()">
+            <i class="ti ti-arrow-right" aria-hidden="true"></i>
+            Voir les critiques
+          </button>
+        </div>
+        }
+
+        @if (!topRequestedFeature() && !mainFrustration() && criticalCount() === 0) {
+        <div class="ai-insight">
+          <div class="ai-insight-label">État</div>
+          <div class="ai-insight-value">
+            @if (pendingAiCount() > 0) {
+            {{ pendingAiCount() }} feedback{{ pendingAiCount() > 1 ? 's' : '' }}
+            en cours d'analyse…
+            } @else {
+            Aucun insight disponible pour l'instant.
+            }
+          </div>
+        </div>
+        }
+
+        <div class="ai-divider"></div>
+
+        <!-- Stats rapides -->
+        <div class="ai-stats-grid">
+          <div class="ai-stat">
+            <div class="ai-stat-value">{{ pendingAiCount() }}</div>
+            <div class="ai-stat-label">En attente</div>
+          </div>
+          <div class="ai-stat">
+            <div class="ai-stat-value">
+              {{ totalCount() > 0 ? ((analyzedCount() / totalCount()) * 100 | number:'1.0-0') : 0 }}%
+            </div>
+            <div class="ai-stat-label">Analysés</div>
+          </div>
+          <div class="ai-stat">
+            <div class="ai-stat-value">{{ criticalCount() }}</div>
+            <div class="ai-stat-label">Critiques</div>
+          </div>
+          <div class="ai-stat">
+            <div class="ai-stat-value">{{ highPriorityCount() }}</div>
+            <div class="ai-stat-label">Haute prio.</div>
+          </div>
+        </div>
+
+        <div class="ai-divider"></div>
+
+        <button class="ai-cta" (click)="showAiFilters.update(v => !v)">
+          <i class="ti ti-file-description" aria-hidden="true"></i>
+          Filtres IA avancés
+        </button>
+
+      </aside>
+
     </div>
-    }
-
-    @if (criticalCount() > 0) {
-    <div class="ai-insight ai-insight--urgent">
-      <div class="ai-insight__label">Action recommandée</div>
-      <div class="ai-insight__content">
-        {{ criticalCount() }} feedback{{ criticalCount() > 1 ? 's critiques' : ' critique' }}
-        à traiter en priorité.
-      </div>
-      <button class="ai-insight__link" (click)="toggleCriticalMode()">
-        <i class="ti ti-arrow-right" aria-hidden="true"></i>
-        Voir les critiques
-      </button>
-    </div>
-    }
-
-    <div class="ai-panel__divider"></div>
-
-    <div class="ai-stats">
-      <div class="ai-stat">
-        <span class="ai-stat__value">{{ pendingAiCount() }}</span>
-        <span class="ai-stat__label">En attente</span>
-      </div>
-      <div class="ai-stat">
-        <span class="ai-stat__value">
-          {{ totalCount() > 0 ? ((feedbacks().length - pendingAiCount()) / feedbacks().length * 100 | number:'1.0-0') :
-          0 }}%
-        </span>
-        <span class="ai-stat__label">Analysés</span>
-      </div>
-    </div>
-
-  </aside>
+  </div>
 
   <!-- ══ DRAWER ════════════════════════════════════════════════════════════════ -->
   <app-feedback-drawer [feedback]="selectedFeedback()" [open]="drawerOpen()" (closed)="closeDrawer()"

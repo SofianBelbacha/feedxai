@@ -9,9 +9,9 @@ namespace AiReviewHub.Domain.Entities
         // Transitions d'état autorisées
         private static readonly Dictionary<FeedbackStatus, FeedbackStatus[]> AllowedTransitions = new()
         {
-            { FeedbackStatus.Todo,       [FeedbackStatus.InProgress] },
+            { FeedbackStatus.Todo, [FeedbackStatus.InProgress] },
             { FeedbackStatus.InProgress, [FeedbackStatus.Todo, FeedbackStatus.Done] },
-            { FeedbackStatus.Done,       [FeedbackStatus.InProgress] }
+            { FeedbackStatus.Done, [FeedbackStatus.InProgress] }
         };
 
         public Guid Id { get; private set; }
