@@ -39,6 +39,7 @@ namespace AiReviewHub.Application.Trends.Queries.GetTrends
 
         internal sealed record DashboardFeedbackDataPrevious(
             FeedbackCategory Category,
+            FeedbackPriority Priority,
             FeedbackStatus Status,
             DateTime CreatedAt,
             DateTime? ResolvedAt,
@@ -87,7 +88,7 @@ namespace AiReviewHub.Application.Trends.Queries.GetTrends
 
             var previousFeedbacks = await baseQuery
                 .Where(f => f.CreatedAt >= prevFrom && f.CreatedAt < prevTo)
-                .Select(f => new DashboardFeedbackDataPrevious(f.Category, f.Status, f.CreatedAt, f.ResolvedAt, f.ProjectId, f.Project.Name ))
+                .Select(f => new DashboardFeedbackDataPrevious(f.Category, f.Priority, f.Status, f.CreatedAt, f.ResolvedAt, f.ProjectId, f.Project.Name ))
                 .ToListAsync(cancellationToken);
 
             var days = Math.Max(request.Days, 1);
@@ -113,10 +114,16 @@ namespace AiReviewHub.Application.Trends.Queries.GetTrends
             // ── 7. Auto alerts ───────────────────────────────────
             var alerts = BuildAlerts(categories, backlog, resolution, volume);
 
+            var priorityEvolution = BuildPriorityEvolution(currentFeedbacks, previousFeedbacks);
+
+            var insights = BuildInsights(categories, priorityEvolution, volume, backlog, resolution);
+
+            var heatmap = BuildHeatmap(currentFeedbacks);
+
             return new GetTrendsResult(
                 volume, categories, emerging,
                 topProjects, backlog, resolution,
-                priorityTrend, alerts);
+                priorityTrend, priorityEvolution, insights, alerts, heatmap);
         }
 
         // ── Builders ─────────────────────────────────────────────────────────────
@@ -303,6 +310,224 @@ namespace AiReviewHub.Application.Trends.Queries.GetTrends
                     $"Le volume de feedbacks a augmenté de {volume.GrowthPercent}% vs la période précédente."));
 
             return alerts;
+        }
+
+
+        private static PriorityEvolution BuildPriorityEvolution(IReadOnlyList<DashboardFeedbackDataCurrent> current, IReadOnlyList<DashboardFeedbackDataPrevious> previous)
+        {
+
+            static double? Delta(int curr, int prev) =>
+                prev > 0 ? Math.Round((double)(curr - prev) / prev * 100, 1) : null;
+
+            var currCrit = current.Count(x => x.Priority == FeedbackPriority.Critical);
+            var currHigh = current.Count(x => x.Priority == FeedbackPriority.High);
+            var currNorm = current.Count(x => x.Priority == FeedbackPriority.Normal);
+            var currLow = current.Count(x => x.Priority == FeedbackPriority.Low);
+
+            var prevCrit = previous.Count(x => x.Priority == FeedbackPriority.Critical);
+            var prevHigh = previous.Count(x => x.Priority == FeedbackPriority.High);
+            var prevNorm = previous.Count(x => x.Priority == FeedbackPriority.Normal);
+            var prevLow = previous.Count(x => x.Priority == FeedbackPriority.Low);
+
+            return new PriorityEvolution(
+                currCrit, currHigh, currNorm, currLow,
+                prevCrit, prevHigh, prevNorm, prevLow,
+                Delta(currCrit, prevCrit),
+                Delta(currHigh, prevHigh),
+                Delta(currNorm, prevNorm),
+                Delta(currLow, prevLow));
+        }
+
+        private static List<TrendInsight> BuildInsights(IList<CategoryEvolution> categories, PriorityEvolution priority, VolumeEvolution volume, BacklogHealth backlog, ResolutionMetrics resolution)
+        {
+            var insights = new List<TrendInsight>();
+
+            // ── Insights catégories ──────────────────────────────────
+
+            foreach (var cat in categories.Where(c => c.Delta.HasValue))
+            {
+                var delta = cat.Delta!.Value;
+                var name = cat.Category;
+
+                if (delta >= 40)
+                {
+                    insights.Add(new TrendInsight(
+                        Title: $"Forte hausse des {name.ToLower()}",
+                        Description: $"Les {name.ToLower()} ont augmenté de {delta}% vs la période précédente. " +
+                                     $"Ils représentent désormais {cat.CurrentPercent}% de l'ensemble des feedbacks.",
+                        Type: InsightType.Rising,
+                        Confidence: ComputeConfidence(cat.CurrentCount, delta),
+                        Category: cat.Category,
+                        Delta: delta));
+                }
+                else if (delta <= -30)
+                {
+                    insights.Add(new TrendInsight(
+                        Title: $"Baisse des {name.ToLower()}",
+                        Description: $"Les {name.ToLower()} ont diminué de {Math.Abs(delta)}% " +
+                                     $"par rapport à la période précédente ({cat.PreviousCount} → {cat.CurrentCount}).",
+                        Type: InsightType.Falling,
+                        Confidence: ComputeConfidence(cat.PreviousCount, Math.Abs(delta)),
+                        Category: cat.Category,
+                        Delta: delta));
+                }
+                else if (delta is > 10 and < 40)
+                {
+                    insights.Add(new TrendInsight(
+                        Title: $"Légère hausse des {name.ToLower()}",
+                        Description: $"+{delta}% vs période précédente. Tendance à surveiller.",
+                        Type: InsightType.Stable,
+                        Confidence: ComputeConfidence(cat.CurrentCount, delta) * 0.7,
+                        Category: cat.Category,
+                        Delta: delta));
+                }
+            }
+
+            // ── Catégories émergentes ────────────────────────────────
+
+            foreach (var cat in categories.Where(c => c.IsEmerging))
+            {
+                insights.Add(new TrendInsight(
+                    Title: $"Nouveau signal : {cat.Category}",
+                    Description: $"{cat.CurrentCount} feedbacks sur cette période sans précédent historique. " +
+                                 $"Nouveau sujet à surveiller.",
+                    Type: InsightType.Emerging,
+                    Confidence: Math.Min(0.5 + cat.CurrentCount * 0.02, 0.9),
+                    Category: cat.Category,
+                    Delta: null));
+            }
+
+            // ── Insights priorités ───────────────────────────────────
+
+            if (priority.CriticalDelta >= 30)
+            {
+                insights.Add(new TrendInsight(
+                    Title: "Feedbacks critiques en hausse",
+                    Description: $"Les feedbacks critiques ont augmenté de {priority.CriticalDelta}%. " +
+                                 $"Actuellement {priority.CurrentCritical} feedbacks critiques ouverts.",
+                    Type: InsightType.Warning,
+                    Confidence: 0.9,
+                    Category: null,
+                    Delta: priority.CriticalDelta));
+            }
+
+            if (priority.HighDelta >= 25)
+            {
+                insights.Add(new TrendInsight(
+                    Title: "Feedbacks haute priorité en hausse",
+                    Description: $"+{priority.HighDelta}% de feedbacks haute priorité. " +
+                                 $"{priority.CurrentHigh} au total sur la période.",
+                    Type: InsightType.Rising,
+                    Confidence: 0.8,
+                    Category: null,
+                    Delta: priority.HighDelta));
+            }
+
+            if (priority.CriticalDelta is <= -20)
+            {
+                insights.Add(new TrendInsight(
+                    Title: "Réduction des feedbacks critiques",
+                    Description: $"Les feedbacks critiques ont diminué de {Math.Abs(priority.CriticalDelta!.Value)}%. " +
+                                 $"Signal positif pour la qualité produit.",
+                    Type: InsightType.Falling,
+                    Confidence: 0.85,
+                    Category: null,
+                    Delta: priority.CriticalDelta));
+            }
+
+            // ── Insight backlog ──────────────────────────────────────
+
+            if (backlog.ResolutionRatio < 0.7)
+            {
+                insights.Add(new TrendInsight(
+                    Title: "Backlog en accumulation",
+                    Description: $"Le ratio résolution/création est de {backlog.ResolutionRatio:F1}. " +
+                                 $"L'équipe résout moins vite que les feedbacks n'arrivent. " +
+                                 $"Âge moyen des tickets ouverts : {backlog.AverageAgeDays}j.",
+                    Type: InsightType.Warning,
+                    Confidence: 0.95,
+                    Category: null,
+                    Delta: null));
+            }
+            else if (backlog.ResolutionRatio >= 1.2)
+            {
+                insights.Add(new TrendInsight(
+                    Title: "Backlog en réduction",
+                    Description: $"Ratio résolution/création de {backlog.ResolutionRatio:F1}. " +
+                                 $"L'équipe résout plus vite que les feedbacks n'arrivent.",
+                    Type: InsightType.Falling,
+                    Confidence: 0.9,
+                    Category: null,
+                    Delta: null));
+            }
+
+            // ── Insight résolution ───────────────────────────────────
+
+            if (resolution.Delta > 1.5)
+            {
+                insights.Add(new TrendInsight(
+                    Title: "Temps de résolution dégradé",
+                    Description: $"Le délai moyen est passé de {resolution.PreviousAverageResolutionDays:F1}j " +
+                                 $"à {resolution.AverageResolutionDays:F1}j (+{resolution.Delta:F1}j). " +
+                                 $"L'équipe met plus de temps à traiter les feedbacks.",
+                    Type: InsightType.Warning,
+                    Confidence: 0.85,
+                    Category: null,
+                    Delta: resolution.Delta));
+            }
+            else if (resolution.Delta < -1.0)
+            {
+                insights.Add(new TrendInsight(
+                    Title: "Temps de résolution amélioré",
+                    Description: $"Le délai moyen est passé de {resolution.PreviousAverageResolutionDays:F1}j " +
+                                 $"à {resolution.AverageResolutionDays:F1}j. Signal positif.",
+                    Type: InsightType.Falling,
+                    Confidence: 0.8,
+                    Category: null,
+                    Delta: resolution.Delta));
+            }
+
+            // Trier : Warning en premier, puis Rising, puis par confiance
+            return insights
+                .OrderBy(i => i.Type == InsightType.Warning ? 0 :
+                              i.Type == InsightType.Rising ? 1 : 2)
+                .ThenByDescending(i => i.Confidence)
+                .Take(8)
+                .ToList();
+        }
+
+        private static List<HeatmapCell> BuildHeatmap(IReadOnlyList<DashboardFeedbackDataCurrent> feedbacks)
+        {
+            // Groupe par (jour de semaine ISO : Lundi=0, Dimanche=6) × heure
+            var grouped = feedbacks
+                .GroupBy(f =>
+                {
+                    var dt = (DateTime)f.CreatedAt;
+                    // DayOfWeek .NET : Sunday=0 → on normalise en Lundi=0
+                    var dow = ((int)dt.DayOfWeek + 6) % 7;
+                    return (DayOfWeek: dow, Hour: dt.Hour);
+                })
+                .Select(g => new HeatmapCell(g.Key.DayOfWeek, g.Key.Hour, g.Count()))
+                .ToList();
+
+            // Compléter les cellules manquantes avec 0
+            var result = new List<HeatmapCell>();
+            for (var day = 0; day < 7; day++)
+                for (var hour = 0; hour < 24; hour++)
+                {
+                    var existing = grouped.FirstOrDefault(c => c.DayOfWeek == day && c.Hour == hour);
+                    result.Add(existing ?? new HeatmapCell(day, hour, 0));
+                }
+
+            return result;
+        }
+
+        private static double ComputeConfidence(int count, double delta)
+        {
+            // Plus il y a de feedbacks et plus la variation est forte, plus on est confiant
+            var volumeScore = Math.Min(count / 20.0, 1.0);       // seuil : 20 feedbacks = confiance max volume
+            var deltaScore = Math.Min(Math.Abs(delta) / 100.0, 1.0); // seuil : 100% = confiance max delta
+            return Math.Round((volumeScore * 0.4 + deltaScore * 0.6), 2);
         }
     }
 }

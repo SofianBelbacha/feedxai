@@ -25,4 +25,21 @@ export class TrendsService {
       { params: httpParams, withCredentials: true }
     );
   }
+
+  exportCsv(params: {
+    days: number;
+    projectId?: string;
+    category?: string;
+    priority?: string;
+  }): Observable<Blob> {
+    let httpParams = new HttpParams().set('days', params.days.toString());
+    if (params.projectId) httpParams = httpParams.set('projectId', params.projectId);
+    if (params.category) httpParams = httpParams.set('category', params.category);
+    if (params.priority) httpParams = httpParams.set('priority', params.priority);
+
+    return this.http.get(
+      `${this.API}/trends/export`,
+      { params: httpParams, responseType: 'blob', withCredentials: true }
+    );
+  }
 }

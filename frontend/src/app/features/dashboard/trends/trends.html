@@ -32,6 +32,27 @@
         <option [value]="p">{{ p }}</option>
         }
       </select>
+
+      <div class="export-group">
+        <button class="export-btn" [disabled]="exporting()" (click)="exportCsv()"
+          title="Exporter les données de tendances en CSV">
+          @if (exporting()) {
+          <span class="export-btn__spinner"></span>
+          Export…
+          } @else {
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 2v8M5 7l3 3 3-3" />
+            <path d="M3 12h10" />
+          </svg>
+          Exporter CSV
+          }
+        </button>
+
+        @if (exportError()) {
+        <span class="export-error">{{ exportError() }}</span>
+        }
+      </div>
     </div>
   </header>
 
@@ -118,6 +139,60 @@
   </section>
   }
 
+  <!-- ══ INSIGHTS ═══════════════════════════════════════════════════════════ -->
+  @if (insights().length > 0) {
+  <section class="insights-section">
+    <div class="insights-section__header">
+      <div class="insights-badge">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+          stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 2l1.5 4.5L14 8l-4.5 1.5L8 14l-1.5-4.5L2 8l4.5-1.5z" />
+        </svg>
+        Synthèse automatique
+      </div>
+      <h2 class="insights-section__title">Insights détectés</h2>
+      <p class="insights-section__subtitle">
+        Générés automatiquement à partir de vos données sur {{ selectedDays() }} jours
+      </p>
+    </div>
+
+    <div class="insights-grid">
+      @for (insight of insights(); track insight.title) {
+      <div class="insight-card insight-card--{{ getInsightConfig(insight.type).cls }}">
+
+        <!-- Type badge + confiance -->
+        <div class="insight-card__meta">
+          <span class="insight-type-badge insight-type-badge--{{ getInsightConfig(insight.type).cls }}">
+            <span class="insight-type-badge__icon">{{ getInsightConfig(insight.type).icon }}</span>
+            {{ getInsightConfig(insight.type).label }}
+          </span>
+          <span class="confidence-pill" [class]="getConfidenceClass(insight.confidence)"
+            [title]="getConfidenceLabel(insight.confidence)">
+            {{ (insight.confidence * 100).toFixed(0) }}%
+          </span>
+        </div>
+
+        <!-- Contenu -->
+        <h3 class="insight-card__title">{{ insight.title }}</h3>
+        <p class="insight-card__desc">{{ insight.description }}</p>
+
+        <!-- Delta si présent -->
+        @if (insight.delta !== null) {
+        <div class="insight-card__footer">
+          <span class="insight-delta" [class.insight-delta--up]="insight.delta > 0"
+            [class.insight-delta--down]="insight.delta < 0">
+            {{ insight.delta > 0 ? '+' : '' }}{{ insight.delta }}%
+            vs période précédente
+          </span>
+        </div>
+        }
+
+      </div>
+      }
+    </div>
+  </section>
+  }
+
   <!-- ══ GRID : CATÉGORIES + PROJETS ════════════════════════════════════ -->
   <div class="trends__grid">
 
@@ -184,6 +259,165 @@
     </section>
 
   </div>
+
+  <!-- ══ ANALYSE DES PRIORITÉS ══════════════════════════════════════════════ -->
+  @if (priorityEvolution() && priorityChartData().datasets.length) {
+  <section class="chart-card chart-card--full">
+
+    <div class="chart-card__header">
+      <div>
+        <h2 class="chart-card__title">Analyse des priorités</h2>
+        <p class="chart-card__subtitle">Répartition et évolution par niveau de priorité</p>
+      </div>
+    </div>
+
+    <!-- Métriques priorités -->
+    <div class="priority-metrics">
+
+      <div class="priority-metric priority-metric--critical">
+        <div class="priority-metric__top">
+          <span class="priority-dot priority-dot--critical"></span>
+          <span class="priority-metric__label">Critique</span>
+        </div>
+        <span class="priority-metric__value">{{ priorityEvolution()!.currentCritical }}</span>
+        @if (priorityEvolution()!.criticalDelta !== null) {
+        <span class="priority-metric__delta" [class.delta--up]="priorityEvolution()!.criticalDelta! > 0"
+          [class.delta--down]="priorityEvolution()!.criticalDelta! < 0">
+          {{ getPriorityDeltaLabel(priorityEvolution()!.criticalDelta) }}
+        </span>
+        }
+        <span class="priority-metric__prev">
+          {{ priorityEvolution()!.previousCritical }} précédemment
+        </span>
+      </div>
+
+      <div class="priority-metric priority-metric--high">
+        <div class="priority-metric__top">
+          <span class="priority-dot priority-dot--high"></span>
+          <span class="priority-metric__label">Haute</span>
+        </div>
+        <span class="priority-metric__value">{{ priorityEvolution()!.currentHigh }}</span>
+        @if (priorityEvolution()!.highDelta !== null) {
+        <span class="priority-metric__delta" [class.delta--up]="priorityEvolution()!.highDelta! > 0"
+          [class.delta--down]="priorityEvolution()!.highDelta! < 0">
+          {{ getPriorityDeltaLabel(priorityEvolution()!.highDelta) }}
+        </span>
+        }
+        <span class="priority-metric__prev">
+          {{ priorityEvolution()!.previousHigh }} précédemment
+        </span>
+      </div>
+
+      <div class="priority-metric priority-metric--normal">
+        <div class="priority-metric__top">
+          <span class="priority-dot priority-dot--normal"></span>
+          <span class="priority-metric__label">Normale</span>
+        </div>
+        <span class="priority-metric__value">{{ priorityEvolution()!.currentNormal }}</span>
+        @if (priorityEvolution()!.normalDelta !== null) {
+        <span class="priority-metric__delta" [class.delta--up]="priorityEvolution()!.normalDelta! > 0"
+          [class.delta--down]="priorityEvolution()!.normalDelta! < 0">
+          {{ getPriorityDeltaLabel(priorityEvolution()!.normalDelta) }}
+        </span>
+        }
+        <span class="priority-metric__prev">
+          {{ priorityEvolution()!.previousNormal }} précédemment
+        </span>
+      </div>
+
+      <div class="priority-metric priority-metric--low">
+        <div class="priority-metric__top">
+          <span class="priority-dot priority-dot--low"></span>
+          <span class="priority-metric__label">Basse</span>
+        </div>
+        <span class="priority-metric__value">{{ priorityEvolution()!.currentLow }}</span>
+        @if (priorityEvolution()!.lowDelta !== null) {
+        <span class="priority-metric__delta" [class.delta--up]="priorityEvolution()!.lowDelta! > 0"
+          [class.delta--down]="priorityEvolution()!.lowDelta! < 0">
+          {{ getPriorityDeltaLabel(priorityEvolution()!.lowDelta) }}
+        </span>
+        }
+        <span class="priority-metric__prev">
+          {{ priorityEvolution()!.previousLow }} précédemment
+        </span>
+      </div>
+
+    </div>
+
+    <!-- Graphique empilé -->
+    <div class="chart-card__canvas chart-card__canvas--lg">
+      <canvas baseChart [data]="priorityChartData()" [options]="priorityChartOptions" type="bar"
+        aria-label="Évolution des priorités">
+      </canvas>
+    </div>
+
+  </section>
+  }
+
+  <!-- ══ HEATMAP TEMPORELLE ═════════════════════════════════════════════════ -->
+  @if (heatmapCells().length > 0) {
+  <section class="chart-card chart-card--full heatmap-section">
+
+    <div class="chart-card__header">
+      <div>
+        <h2 class="chart-card__title">Activité temporelle</h2>
+        <p class="chart-card__subtitle">
+          Quand vos utilisateurs remontent le plus de feedbacks
+        </p>
+      </div>
+      <!-- Légende intensité -->
+      <div class="heatmap-legend" aria-hidden="true">
+        <span class="heatmap-legend__label">Moins</span>
+        <div class="heatmap-legend__scale">
+          @for (step of [0.08, 0.25, 0.5, 0.75, 1.0]; track step) {
+          <div class="heatmap-legend__cell" [style.opacity]="step">
+          </div>
+          }
+        </div>
+        <span class="heatmap-legend__label">Plus</span>
+      </div>
+    </div>
+
+    <!-- Grille heatmap -->
+    <div class="heatmap-wrapper" role="img" aria-label="Heatmap d'activité par jour et heure">
+
+      <!-- Labels heures (axe X) -->
+      <div class="heatmap-x-labels">
+        <div class="heatmap-x-labels__offset"></div>
+        @for (label of hourLabels; track $index) {
+        <div class="heatmap-x-label">{{ label }}</div>
+        }
+      </div>
+
+      <!-- Lignes (jours) -->
+      @for (row of heatmapMatrix(); track $index; let dayIndex = $index) {
+      <div class="heatmap-row">
+        <!-- Label jour (axe Y) -->
+        <div class="heatmap-y-label">{{ dayLabels[dayIndex] }}</div>
+
+        <!-- Cellules (heures) -->
+        @for (count of row; track $index; let hourIndex = $index) {
+        <div class="heatmap-cell" [class.heatmap-cell--empty]="count === 0"
+          [style.opacity]="count > 0 ? getHeatmapOpacity(count) : 1"
+          [title]="getHeatmapTooltip(dayIndex, hourIndex, count)" role="gridcell"
+          [attr.aria-label]="getHeatmapTooltip(dayIndex, hourIndex, count)">
+        </div>
+        }
+      </div>
+      }
+
+    </div>
+
+    <!-- Peaks automatiques -->
+    @if (heatmapMax() > 0) {
+    <p class="heatmap-note">
+      Pic d'activité détecté — utilisez ces données pour planifier vos releases
+      et anticiper les pics de feedback.
+    </p>
+    }
+
+  </section>
+  }
 
   <!-- ══ GRID : BACKLOG HEALTH + RÉSOLUTION ══════════════════════════════ -->
   <div class="trends__grid">

@@ -60,6 +60,38 @@ export interface AutoAlert {
   message: string;
 }
 
+export type InsightType = 'Rising' | 'Falling' | 'Emerging' | 'Stable' | 'Warning';
+
+export interface TrendInsight {
+  title: string;
+  description: string;
+  type: InsightType;
+  confidence: number;       
+  category: string | null;
+  delta: number | null;
+}
+
+export interface PriorityEvolution {
+  currentCritical: number;
+  currentHigh: number;
+  currentNormal: number;
+  currentLow: number;
+  previousCritical: number;
+  previousHigh: number;
+  previousNormal: number;
+  previousLow: number;
+  criticalDelta: number | null;
+  highDelta: number | null;
+  normalDelta: number | null;
+  lowDelta: number | null;
+}
+
+export interface HeatmapCell {
+  dayOfWeek: number;  // 0 = Lundi … 6 = Dimanche
+  hour:      number;  // 0 … 23
+  count:     number;
+}
+
 export interface TrendsData {
   volume: VolumeEvolution;
   categories: CategoryEvolution[];
@@ -68,7 +100,10 @@ export interface TrendsData {
   backlog: BacklogHealth;
   resolution: ResolutionMetrics;
   priorityTrend: PriorityPoint[];
+  priorityEvolution: PriorityEvolution;
+  insights: TrendInsight[];
   alerts: AutoAlert[];
+  heatmap: HeatmapCell[];
 }
 
 export type PeriodDays = 7 | 30 | 90 | 180 | 365;

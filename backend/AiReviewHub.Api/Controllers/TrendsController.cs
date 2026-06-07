@@ -1,4 +1,6 @@
-﻿using AiReviewHub.Application.Trends.Queries.GetTrends;
+﻿using AiReviewHub.Application.Trends.Queries.ExportTrendsCsv;
+using AiReviewHub.Application.Trends.Queries.GetTrends;
+using AiReviewHub.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,6 +29,24 @@ namespace AiReviewHub.Api.Controllers
                 cancellationToken);
 
             return Ok(result);
+        }
+
+        [HttpGet("export")]
+        public async Task<IActionResult> Export(
+            [FromQuery] int days = 30,
+            [FromQuery] Guid? projectId = null,
+            [FromQuery] FeedbackCategory? category = null,
+            [FromQuery] FeedbackPriority? priority = null,
+            CancellationToken cancellationToken = default)
+        {
+            var result = await _mediator.Send(
+                new ExportTrendsCsvQuery(days, projectId, category, priority),
+                cancellationToken);
+
+            return File(
+                result.Content,
+                "text/csv; charset=utf-8",
+                result.FileName);
         }
     }
 }

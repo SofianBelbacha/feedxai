@@ -20,7 +20,10 @@ namespace AiReviewHub.Application.Trends.Queries.GetTrends
         BacklogHealth Backlog,
         ResolutionMetrics Resolution,
         IReadOnlyList<PriorityPoint> PriorityTrend,
-        IReadOnlyList<AutoAlert> Alerts
+        PriorityEvolution PriorityEvolution,  
+        IReadOnlyList<TrendInsight> Insights,  
+        IReadOnlyList<AutoAlert> Alerts,
+        IReadOnlyList<HeatmapCell> Heatmap
     );
 
     // ── Volume evolution ─────────────────────────────────────────────────────────
@@ -95,4 +98,48 @@ namespace AiReviewHub.Application.Trends.Queries.GetTrends
         string AlertType,   // "danger" | "warning" | "info"
         string Message
     );
+
+    // ── Priority evolution ────────────────────────────────────────────────────────
+
+    public record PriorityEvolution(
+        int CurrentCritical,
+        int CurrentHigh,
+        int CurrentNormal,
+        int CurrentLow,
+        int PreviousCritical,
+        int PreviousHigh,
+        int PreviousNormal,
+        int PreviousLow,
+        double? CriticalDelta,    // variation % vs période précédente
+        double? HighDelta,
+        double? NormalDelta,
+        double? LowDelta
+    );
+
+    // ── Trend insights ────────────────────────────────────────────────────────────
+
+    public record TrendInsight(
+        string Title,
+        string Description,
+        InsightType Type,          // Rising | Falling | Emerging | Stable | Warning
+        double Confidence,    // 0.0 - 1.0
+        string? Category,
+        double? Delta
+    );
+
+    public enum InsightType
+    {
+        Rising,
+        Falling,
+        Emerging,
+        Stable,
+        Warning
+    }
+
+    public record HeatmapCell(
+    int DayOfWeek,  // 0 = Lundi … 6 = Dimanche
+    int Hour,       // 0 … 23
+    int Count
+);
+
 }
