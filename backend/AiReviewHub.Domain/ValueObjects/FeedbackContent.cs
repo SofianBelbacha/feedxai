@@ -6,27 +6,24 @@ namespace AiReviewHub.Domain.ValueObjects
 {
     public sealed class FeedbackContent
     {
+        public const int MinLength = 10;
         public const int MaxLength = 5000;
-        public const int MinLength = 5;
 
         public string Value { get; }
 
         private FeedbackContent(string value) => Value = value;
 
-        public static FeedbackContent Create(string value)
+        public static FeedbackContent Create(string rawContent)
         {
-            if (string.IsNullOrWhiteSpace(value))
-                throw new ArgumentException("Content cannot be empty");
+            var trimmed = rawContent?.Trim() ?? string.Empty;
 
-            value = value.Trim();
-
-            if (value.Length < MinLength)
+            if (trimmed.Length < MinLength)
                 throw new ArgumentException($"Content must be at least {MinLength} characters");
 
-            if (value.Length > MaxLength)
+            if (trimmed.Length > MaxLength)
                 throw new ArgumentException($"Content cannot exceed {MaxLength} characters");
 
-            return new FeedbackContent(value);
+            return new FeedbackContent(trimmed);
         }
 
         public override string ToString() => Value;

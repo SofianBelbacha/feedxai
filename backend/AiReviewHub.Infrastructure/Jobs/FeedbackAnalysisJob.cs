@@ -35,30 +35,29 @@ public class FeedbackAnalysisJob
     // ─── Entrées par plan ────────────────────────────────────
 
     [Queue("critical")]
-    public Task AnalyzeFeedbackPriorityAsync(Guid feedbackId)
-        => AnalyzeFeedbackInternalAsync(feedbackId);
+    public Task AnalyzeFeedbackPriorityAsync(Guid feedbackId, IJobCancellationToken jobToken)
+        => AnalyzeFeedbackInternalAsync(feedbackId, jobToken.ShutdownToken);
 
     [Queue("default")]
     [AutomaticRetry(Attempts = 3, DelaysInSeconds = [30, 60, 120])]
-    public Task AnalyzeFeedbackAsync(Guid feedbackId)
-        => AnalyzeFeedbackInternalAsync(feedbackId);
+    public Task AnalyzeFeedbackAsync(Guid feedbackId, IJobCancellationToken jobToken)
+        => AnalyzeFeedbackInternalAsync(feedbackId, jobToken.ShutdownToken);
 
     [Queue("free")]
     [AutomaticRetry(Attempts = 2, DelaysInSeconds = [60, 180])]
-    public Task AnalyzeFeedbackFreeAsync(Guid feedbackId)
-        => AnalyzeFeedbackInternalAsync(feedbackId);
+    public Task AnalyzeFeedbackFreeAsync(Guid feedbackId, IJobCancellationToken jobToken)
+        => AnalyzeFeedbackInternalAsync(feedbackId, jobToken.ShutdownToken);
 
     // ─── Logique commune ─────────────────────────────────────
 
-    private async Task AnalyzeFeedbackInternalAsync(Guid feedbackId)
+    private async Task AnalyzeFeedbackInternalAsync(Guid feedbackId, CancellationToken cancellationToken)
     {
         var now = _dateTimeProvider.UtcNow;
 
-        // Charge le feedback avec son projet et son user
         var feedback = await _context.Feedbacks
             .Include(f => f.Project)
                 .ThenInclude(p => p.User)
-            .FirstOrDefaultAsync(f => f.Id == feedbackId);
+            .FirstOrDefaultAsync(f => f.Id == feedbackId, cancellationToken);
 
         if (feedback is null)
         {
@@ -77,7 +76,6 @@ public class FeedbackAnalysisJob
 
         if (feedback.AiAnalysisStatus == AiAnalysisStatus.Processing)
         {
-            // Détecte un job bloqué — processing depuis plus de 2 minutes
             var isStuck = feedback.UpdatedAt.HasValue &&
                           (now - feedback.UpdatedAt.Value).TotalMinutes > 2;
 
@@ -104,7 +102,7 @@ public class FeedbackAnalysisJob
                 user.Id, user.Plan);
 
             feedback.MarkAsFailed("Quota journalier d'analyse IA atteint", now);
-            await SaveChangesAsync();
+            await SaveChangesAsync(cancellationToken);
             return;
         }
 
@@ -113,12 +111,14 @@ public class FeedbackAnalysisJob
             "[AI] Starting analysis for feedback {FeedbackId}", feedbackId);
 
         feedback.MarkAsProcessing(now);
-        await SaveChangesAsync();
+        await SaveChangesAsync(cancellationToken);
 
         try
         {
             var result = await _aiService.AnalyzeAsync(
-                feedback.Content.Value, user?.Plan ?? Plan.Free);
+                feedback.Content.Value,
+                user?.Plan ?? Plan.Free,
+                cancellationToken);   // ← propagé, manquant avant
 
             feedback.EnrichWithAi(
                 result.Category,
@@ -133,12 +133,20 @@ public class FeedbackAnalysisJob
                 result.Urgency
             );
 
-            await SaveChangesAsync();
+            await SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation(
                 "[AI] Feedback {FeedbackId} analyzed successfully — " +
                 "Category: {Category}, Priority: {Priority}",
                 feedbackId, result.Category, result.Priority);
+        }
+        catch (OperationCanceledException)
+        {
+            // Arrêt propre demandé par Hangfire (shutdown) : on ne marque pas en échec,
+            // le job sera simplement re-traité au redémarrage (statut resté "Processing").
+            _logger.LogInformation(
+                "[AI] Analysis cancelled for feedback {FeedbackId} (shutdown)", feedbackId);
+            throw;
         }
         catch (Exception ex)
         {
@@ -149,16 +157,19 @@ public class FeedbackAnalysisJob
                 feedbackId, ex.Message);
 
             feedback.MarkAsFailed(safeError, _dateTimeProvider.UtcNow);
-            await SaveChangesAsync();
 
-            throw; // Hangfire gère le retry
+            // ⚠️ Voir note ci-dessous sur ce SaveChangesAsync en cas d'annulation
+            await SaveChangesAsync(CancellationToken.None);
+
+            throw;
         }
     }
 
     // ─── Helpers ─────────────────────────────────────────────
 
-    private Task SaveChangesAsync() =>
-        ((AppDbContext)_context).SaveChangesAsync();
+    private Task SaveChangesAsync(CancellationToken cancellationToken) =>
+       _context.SaveChangesAsync(cancellationToken);
+
 
     private static string GetSafeErrorMessage(Exception ex) => ex switch
     {

@@ -1,4 +1,5 @@
-﻿using FluentValidation;
+﻿using AiReviewHub.Domain.ValueObjects;
+using FluentValidation;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -10,9 +11,9 @@ namespace AiReviewHub.Application.Feedbacks.Commands.CreateFeedback
         public CreateFeedbackValidator()
         {
             RuleFor(x => x.Content)
-                .NotEmpty().WithMessage("Content is required")
-                .MinimumLength(10).WithMessage("Content must be at least 10 characters")
-                .MaximumLength(5000).WithMessage("Content cannot exceed 5000 characters");
+                .NotEmpty()
+                .MinimumLength(FeedbackContent.MinLength)
+                .MaximumLength(FeedbackContent.MaxLength);
 
             RuleFor(x => x.ProjectId)
                 .NotEmpty().WithMessage("ProjectId is required");
