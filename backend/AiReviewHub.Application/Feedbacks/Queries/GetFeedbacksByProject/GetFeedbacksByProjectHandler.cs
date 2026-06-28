@@ -27,16 +27,26 @@ namespace AiReviewHub.Application.Feedbacks.Queries.GetFeedbacksByProject
             var pageSize = Math.Clamp(request.PageSize, 1, 100);
             var page = Math.Max(request.Page, 1);
 
-            // Vérifie que le projet existe
 
-            var projectExists = await _context.Projects
-                .AnyAsync(p =>
+            // Vérifie que le projet existe ET récupère le plan du propriétaire
+            // (on a besoin du plan pour valider les filtres Pro)
+            var project = await _context.Projects
+                .Include(p => p.User)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p =>
                     p.Id == request.ProjectId &&
                     p.UserId == _currentUser.UserId,
-                    cancellationToken);
+                    cancellationToken)
+                ?? throw new NotFoundException($"Project {request.ProjectId} not found");
 
-            if (!projectExists)
-                throw new NotFoundException($"Project {request.ProjectId} not found");
+            // ── Garde-fou paywall : les filtres IA avancés sont réservés à Pro/Team ──
+            var hasAdvancedFilter = request.ActionRequired == true
+                || !string.IsNullOrWhiteSpace(request.Sentiment)
+                || request.MinScore.HasValue;
+
+            if (hasAdvancedFilter && project.User.Plan == Domain.Enums.Plan.Free)
+                throw new ForbiddenException(
+                    "Advanced AI filters are available on Pro and Team plans.");
 
 
             // Construction de la query avec filtres optionnels
