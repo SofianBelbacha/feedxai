@@ -37,6 +37,12 @@ namespace AiReviewHub.Tests.Application.Feedbacks
             _analysisQueue = new Mock<IFeedbackAnalysisQueue>();
             _planLimits = new Mock<IPlanLimitsService>();
 
+            // Par défaut : quota toujours disponible
+            _planLimits
+                .Setup(p => p.TryConsumeFeedbackSlotAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new QuotaConsumeResult(IsAllowed: true, Current: 1, Limit: 50));
+
+
             _handler = new CreateFeedbackHandler(
                 _context,
                 _clock,
@@ -82,6 +88,42 @@ namespace AiReviewHub.Tests.Application.Feedbacks
         }
 
         [Fact]
+        public async Task Handle_WhenQuotaExceeded_ShouldThrowQuotaExceededException()
+        {
+            // Arrange
+            var user = EntityBuilders.BuildUser();
+            var project = Project.Create("Test", "", user.Id, _clock.UtcNow);
+            _context.Users.Add(user);
+            _context.Projects.Add(project);
+            await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            _currentUser.UserId = user.Id;
+
+            // Override du setup par défaut pour CE test précis
+            _planLimits
+                .Setup(p => p.TryConsumeFeedbackSlotAsync(user.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new QuotaConsumeResult(IsAllowed: false, Current: 50, Limit: 50));
+
+            var command = new CreateFeedbackCommand(
+                "Contenu du feedback avec assez de texte",
+                project.Id);
+
+            // Act
+            var act = async () => await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<QuotaExceededException>();
+
+            // Vérifie qu'aucun feedback n'a été créé malgré l'appel
+            _context.Feedbacks.Should().BeEmpty();
+
+            // Vérifie qu'aucun job IA n'a été enqueued (le quota a bloqué avant)
+            _analysisQueue.Verify(
+                q => q.Enqueue(It.IsAny<Guid>(), It.IsAny<string>()),
+                Times.Never);
+        }
+
+        [Fact]
         public async Task Handle_WithValidRequest_ShouldEnqueueAiJob()
         {
             // Arrange
@@ -116,7 +158,7 @@ namespace AiReviewHub.Tests.Application.Feedbacks
             // Arrange
             var user = EntityBuilders.BuildUser();
             var project = Project.Create("Test", "", user.Id, _clock.UtcNow);
-            //project.Deactivate(_clock); // projet inactif
+            project.SoftDelete(_clock); // projet inactif
             _context.Users.Add(user);
             _context.Projects.Add(project);
             await _context.SaveChangesAsync(TestContext.Current.CancellationToken);

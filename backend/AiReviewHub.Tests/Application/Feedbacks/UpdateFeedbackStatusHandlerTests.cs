@@ -83,30 +83,37 @@ namespace AiReviewHub.Tests.Application.Feedbacks
         }
 
         [Fact]
-        public async Task Handle_DoneToTodo_ShouldThrowInvalidOperation()
+        public async Task Handle_DoneToTodo_ShouldUpdateStatus()
         {
-            // Arrange
             var user = EntityBuilders.BuildUser();
             var project = EntityBuilders.BuildProject(user.Id);
             var feedback = EntityBuilders.BuildFeedback(project.Id);
+
             feedback.UpdateStatus(FeedbackStatus.InProgress, _clock.UtcNow);
             feedback.UpdateStatus(FeedbackStatus.Done, _clock.UtcNow);
 
             _context.Users.Add(user);
             _context.Projects.Add(project);
             _context.Feedbacks.Add(feedback);
+
             await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             _currentUser.UserId = user.Id;
 
             var command = new UpdateFeedbackStatusCommand(
-                feedback.Id, project.Id, FeedbackStatus.Todo);
+                feedback.Id,
+                project.Id,
+                FeedbackStatus.Todo);
 
             // Act
-            var act = async () => await _handler.Handle(command, CancellationToken.None);
+            await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<InvalidOperationException>();
+            var updated = _context.Feedbacks.Single();
+
+            updated.Status.Should().Be(FeedbackStatus.Todo);
+            updated.ResolvedAt.Should().BeNull();
+            updated.UpdatedAt.Should().Be(_clock.UtcNow);
         }
 
         public void Dispose() => _context.Dispose();
