@@ -1,7 +1,8 @@
 <!-- project-switcher.html -->
 
 <!-- ── Trigger (remplace sidebar__project actuel) ───────────────────────── -->
-<div class="ps-trigger" [class.ps-trigger--open]="open()" (click)="toggle()">
+<div class="ps-trigger" [class.ps-trigger--open]="open()" (click)="toggle()" tabindex="0"
+      role="button" (keydown.enter)="toggle()" (keydown.space)="toggle()">
 
   <!-- Avatar couleur -->
   <div

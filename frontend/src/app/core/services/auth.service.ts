@@ -110,7 +110,8 @@ export class AuthService {
       this.rawHttpSvc.client
         .post(`${this.API}/auth/revoke`, { revokeAll: false }, { withCredentials: true })
         .pipe(finalize(completeLogout))
-        .subscribe({ error: () => {} });
+        //.subscribe({ error: () => {} });
+        .subscribe({ error: (err) => { console.warn('Revoke token failed (ignored):', err)} });
     } else {
       completeLogout();
     }

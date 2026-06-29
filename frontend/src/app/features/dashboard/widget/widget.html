@@ -139,9 +139,9 @@
             </div>
 
             <div class="color-custom">
-              <label class="color-custom__label">Personnalisée</label>
+              <label class="color-custom__label" for="primaryColorPicker">Personnalisée</label>
               <div class="color-custom__input-wrap">
-                <input type="color" class="color-custom__picker" [value]="config().primaryColor"
+                <input type="color" class="color-custom__picker" id="primaryColorPicker" [value]="config().primaryColor"
                   (input)="updateConfig({ primaryColor: $any($event.target).value })">
                 <input type="text" class="color-custom__hex" [value]="config().primaryColor" maxlength="7"
                   placeholder="#3B82F6" (change)="updateConfig({ primaryColor: $any($event.target).value })">

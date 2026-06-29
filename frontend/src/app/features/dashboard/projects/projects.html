@@ -1,4 +1,4 @@
-<div class="projects" (click)="closeMenu()">
+<div class="projects" (click)="closeMenu()" (keydown.enter)="openDrawer(fb)" (keydown.space)="openDrawer(fb)" tabindex="0" role="button">
 
   <!-- ══ HEADER ══════════════════════════════════════════════════════════════ -->
   <header class="projects__header">
@@ -128,8 +128,8 @@
 
         <article
           class="project-card"
-          [class.project-card--inactive]="!project.isActive"
-          (click)="openFeedbacks(project)">
+          [class.project-card--inactive]="!project.isActive" tabindex="0" role="button"
+          (click)="openFeedbacks(project)" (keydown.enter)="openFeedbacks(project)" (keydown.space)="openFeedbacks(project); $event.preventDefault()">
 
           <!-- Top : avatar + menu -->
           <div class="project-card__top">
@@ -138,7 +138,8 @@
             </div>
 
             <!-- Menu contextuel ⋮ -->
-            <div class="project-card__menu-wrap" (click)="$event.stopPropagation()">
+            <div class="project-card__menu-wrap" tabindex="0" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()"
+              (keydown.space)="$event.preventDefault(); $event.stopPropagation()">
               <button
                 class="menu-trigger"
                 [class.menu-trigger--active]="openMenuId() === project.id"
@@ -381,8 +382,8 @@
 
 <!-- Création -->
 @if (showModal()) {
-  <div class="modal-overlay" (click)="closeModal()">
-    <div class="modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+  <div class="modal-overlay" tabindex="0" role="button" (click)="closeModal()" (keydown.enter)="closeModal()" (keydown.space)="closeModal()">
+    <div class="modal" role="dialog" aria-modal="true" >
       <div class="modal__header">
         <h2 class="modal__title">Nouveau projet</h2>
         <button class="modal__close" (click)="closeModal()" aria-label="Fermer">
@@ -400,7 +401,7 @@
           </label>
           <input id="proj-name" class="field__input" type="text"
                  placeholder="Ex : Refonte site e-commerce"
-                 maxlength="100" autofocus
+                 maxlength="100"
                  [ngModel]="newName()" (ngModelChange)="newName.set($event)"/>
           <span class="field__counter">{{ newName().length }}/100</span>
         </div>
@@ -432,8 +433,8 @@
 
 <!-- Snippet manuel -->
 @if (showSnippetModal()) {
-  <div class="modal-overlay" (click)="closeSnippetModal()">
-    <div class="modal" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" tabindex="0" role="button" (click)="closeSnippetModal()" (keydown.enter)="closeSnippetModal()" (keydown.space)="closeSnippetModal()">
+    <div class="modal" tabindex="0" role="dialog" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
       <div class="modal__header">
         <h2 class="modal__title">Snippet d'intégration</h2>
         <button class="modal__close" (click)="closeSnippetModal()">
@@ -457,8 +458,8 @@
 
 <!-- Édition -->
 @if (showEditModal()) {
-  <div class="modal-overlay" (click)="closeEditModal()">
-    <div class="modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+  <div class="modal-overlay" tabindex="0" role="button" (click)="closeEditModal()" (keydown.enter)="closeEditModal()" (keydown.space)="closeEditModal()">
+    <div class="modal" role="dialog" aria-modal="true">
       <div class="modal__header">
         <h2 class="modal__title">Modifier le projet</h2>
         <button class="modal__close" (click)="closeEditModal()">
@@ -499,8 +500,8 @@
 
 <!-- Suppression -->
 @if (showDeleteModal()) {
-  <div class="modal-overlay" (click)="closeDeleteModal()">
-    <div class="modal modal--danger" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+  <div class="modal-overlay" (click)="closeDeleteModal()" tabindex="0" role="button" (keydown.enter)="closeDeleteModal()" (keydown.space)="closeDeleteModal()">
+    <div class="modal modal--danger" role="dialog" aria-modal="true">
       <div class="modal__header">
         <h2 class="modal__title">Supprimer ce projet ?</h2>
         <button class="modal__close" (click)="closeDeleteModal()">
@@ -531,8 +532,8 @@
 
 <!-- Régénération token -->
 @if (showRegenerateModal()) {
-  <div class="modal-overlay" (click)="closeRegenerateModal()">
-    <div class="modal modal--warning" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+  <div class="modal-overlay" (click)="closeRegenerateModal()" tabindex="0" role="button" (keydown.enter)="closeRegenerateModal()" (keydown.space)="closeRegenerateModal()">
+    <div class="modal modal--warning" role="dialog" aria-modal="true">
       <div class="modal__header">
         <h2 class="modal__title">Régénérer le token ?</h2>
         <button class="modal__close" (click)="closeRegenerateModal()">

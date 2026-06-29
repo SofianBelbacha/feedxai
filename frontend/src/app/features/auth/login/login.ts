@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, inject, OnDestroy, signal } from '@angular/core';
+import { AfterViewInit, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -12,7 +12,7 @@ import { parseApiError } from '../../../core/utils/api-error.utils';
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })
-export class Login implements AfterViewInit, OnDestroy {
+export class Login implements AfterViewInit {
   private readonly auth       = inject(AuthService);
   private readonly router     = inject(Router);
   private readonly googleAuth = inject(GoogleAuthService);
@@ -34,8 +34,6 @@ export class Login implements AfterViewInit, OnDestroy {
       this.googleLoading.set(false);
     });
   }
-
-  ngOnDestroy(): void {}
 
   private handleGoogleResponse(response: google.accounts.id.CredentialResponse): void {
     if (!response.credential) {

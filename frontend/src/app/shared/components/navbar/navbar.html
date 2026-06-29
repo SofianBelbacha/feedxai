@@ -3,129 +3,207 @@
 
     <!-- Logo -->
     <a routerLink="/" class="navbar__logo" aria-label="AI Review Hub — accueil" (click)="closeMenu()">
-      <img class="navbar__logo-icon" src="assets/feedxai.svg" viewBox="400 500 1200 900" alt="Logo AI Review Hub"/>
+      <img class="navbar__logo-icon" src="assets/feedxai.svg" viewBox="400 500 1200 900" alt="Logo AI Review Hub" />
     </a>
 
     <!-- Navigation principale (desktop) -->
     <nav class="navbar__nav" aria-label="Navigation principale">
       @for (item of navItems; track item.label) {
 
-        @if (item.megaMenu) {
-          <!-- Lien avec mega-menu -->
-          <div class="navbar__item" (mouseenter)="openMenu(item.label)" (mouseleave)="closeMenu()">
-            <button
-              class="navbar__link"
-              [class.navbar__link--active]="activeMenu() === item.label"
-              type="button"
-              [attr.aria-expanded]="activeMenu() === item.label"
-              aria-haspopup="true"
-              (click)="toggleMenu(item.label)">
-              {{ item.label }}
-              <svg class="navbar__chevron" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="2 4 6 8 10 4"/>
-              </svg>
-            </button>
+      @if (item.megaMenu) {
+      <!-- Lien avec mega-menu -->
+      <div class="navbar__item" (mouseenter)="openMenu(item.label)" (mouseleave)="closeMenu()">
+        <button class="navbar__link" [class.navbar__link--active]="activeMenu() === item.label" type="button"
+          [attr.aria-expanded]="activeMenu() === item.label" aria-haspopup="true" (click)="toggleMenu(item.label)">
+          {{ item.label }}
+          <svg class="navbar__chevron" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="2 4 6 8 10 4" />
+          </svg>
+        </button>
 
-            <!-- Mega-menu dropdown -->
-            @if (activeMenu() === item.label) {
-              <div class="mega-menu" role="dialog" [attr.aria-label]="item.label">
-                @for (col of item.megaMenu; track col.title) {
-                  <div class="mega-menu__col">
-                    <p class="mega-menu__col-title">{{ col.title }}</p>
-                    @for (link of col.links; track link.path) {
-                      <a [routerLink]="link.path" class="mega-menu__link" (click)="closeMenu()">
-                        <span class="mega-menu__link-icon" aria-hidden="true">
-                          <ng-container [ngSwitch]="link.icon">
-                            <ng-container *ngSwitchCase="'brain'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchCase="'kanban'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="4" height="9" rx="1"/><rect x="8" y="2" width="4" height="5" rx="1"/><rect x="14" y="2" width="4" height="12" rx="1"/><rect x="8" y="9" width="4" height="5" rx="1"/><rect x="2" y="13" width="4" height="5" rx="1"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchCase="'code'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 15 18 10 13 5"/><polyline points="7 5 2 10 7 15"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchCase="'chart'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 10 15 10 12.5 17.5 7.5 2.5 5 10 2 10"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchCase="'folder'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4.5a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2z"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchCase="'users'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 17v-1.5a3 3 0 0 0-3-3H5a3 3 0 0 0-3 3V17"/><circle cx="8" cy="6" r="3.5"/><path d="M19 17v-1.5a3 3 0 0 0-2.5-2.97"/><path d="M13 2.13a3.5 3.5 0 0 1 0 6.74"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchCase="'plug'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v4M13 2v4M5 6h10l-1 7H6L5 6zM8 13v5M12 13v5"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchCase="'building'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="16" rx="1"/><path d="M2 8h16M7 8v11M13 8v11"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchCase="'user'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="4"/><path d="M3 18c0-4 3-6 7-6s7 2 7 6"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchCase="'check'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 10 8 15 17 5"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchCase="'headset'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10a7 7 0 0 1 14 0"/><rect x="2" y="10" width="3" height="5" rx="1"/><rect x="15" y="10" width="3" height="5" rx="1"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchCase="'edit'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3.5l2 2-9 9-3 1 1-3 9-9z"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchCase="'book'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4z"/><path d="M7 3v15M10 7h4M10 10h4M10 13h4"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchCase="'map'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 5 7 2 13 5 19 2 19 16 13 19 7 16 1 19 1 5"/><line x1="7" y1="2" x2="7" y2="16"/><line x1="13" y1="5" x2="13" y2="19"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchCase="'lifering'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8"/><circle cx="10" cy="10" r="3.5"/><line x1="3" y1="3" x2="7" y2="7"/><line x1="13" y1="13" x2="17" y2="17"/><line x1="17" y1="3" x2="13" y2="7"/><line x1="7" y1="13" x2="3" y2="17"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchCase="'mail'">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="16" height="12" rx="2"/><polyline points="2,4 10,11 18,4"/></svg>
-                            </ng-container>
-                            <ng-container *ngSwitchDefault>
-                              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8"/></svg>
-                            </ng-container>
-                          </ng-container>
-                        </span>
-                        <span class="mega-menu__link-body">
-                          <span class="mega-menu__link-label">{{ link.label }}</span>
-                          <span class="mega-menu__link-desc">{{ link.description }}</span>
-                        </span>
-                      </a>
-                    }
-                  </div>
+        <!-- Mega-menu dropdown -->
+        @if (activeMenu() === item.label) {
+        <div class="mega-menu" role="dialog" [attr.aria-label]="item.label">
+          @for (col of item.megaMenu; track col.title) {
+          <div class="mega-menu__col">
+            <p class="mega-menu__col-title">{{ col.title }}</p>
+            @for (link of col.links; track link.path) {
+            <a [routerLink]="link.path" class="mega-menu__link" (click)="closeMenu()">
+              <span class="mega-menu__link-icon" aria-hidden="true">
+                @switch (link.icon) {
+
+                @case ('brain') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <rect x="3" y="3" width="14" height="14" rx="2" />
+                  <path d="M7 10h6M10 7v6" />
+                </svg>
                 }
-              </div>
+
+                @case ('kanban') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <rect x="2" y="2" width="4" height="9" rx="1" />
+                  <rect x="8" y="2" width="4" height="5" rx="1" />
+                  <rect x="14" y="2" width="4" height="12" rx="1" />
+                  <rect x="8" y="9" width="4" height="5" rx="1" />
+                  <rect x="2" y="13" width="4" height="5" rx="1" />
+                </svg>
+                }
+
+                @case ('code') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <polyline points="13 15 18 10 13 5" />
+                  <polyline points="7 5 2 10 7 15" />
+                </svg>
+                }
+
+                @case ('chart') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <polyline points="18 10 15 10 12.5 17.5 7.5 2.5 5 10 2 10" />
+                </svg>
+                }
+
+                @case ('folder') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <path d="M18 15.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4.5a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2z" />
+                </svg>
+                }
+
+                @case ('users') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <path d="M14 17v-1.5a3 3 0 0 0-3-3H5a3 3 0 0 0-3 3V17" />
+                  <circle cx="8" cy="6" r="3.5" />
+                  <path d="M19 17v-1.5a3 3 0 0 0-2.5-2.97" />
+                  <path d="M13 2.13a3.5 3.5 0 0 1 0 6.74" />
+                </svg>
+                }
+
+                @case ('plug') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <path d="M7 2v4M13 2v4M5 6h10l-1 7H6L5 6zM8 13v5M12 13v5" />
+                </svg>
+                }
+
+                @case ('building') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <rect x="2" y="3" width="16" height="16" rx="1" />
+                  <path d="M2 8h16M7 8v11M13 8v11" />
+                </svg>
+                }
+
+                @case ('user') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <circle cx="10" cy="7" r="4" />
+                  <path d="M3 18c0-4 3-6 7-6s7 2 7 6" />
+                </svg>
+                }
+
+                @case ('check') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <polyline points="3 10 8 15 17 5" />
+                </svg>
+                }
+
+                @case ('headset') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <path d="M3 10a7 7 0 0 1 14 0" />
+                  <rect x="2" y="10" width="3" height="5" rx="1" />
+                  <rect x="15" y="10" width="3" height="5" rx="1" />
+                </svg>
+                }
+
+                @case ('edit') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <path d="M14.5 3.5l2 2-9 9-3 1 1-3 9-9z" />
+                </svg>
+                }
+
+                @case ('book') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <path d="M3 4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4z" />
+                  <path d="M7 3v15M10 7h4M10 10h4M10 13h4" />
+                </svg>
+                }
+
+                @case ('map') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <polyline points="1 5 7 2 13 5 19 2 19 16 13 19 7 16 1 19 1 5" />
+                  <line x1="7" y1="2" x2="7" y2="16" />
+                  <line x1="13" y1="5" x2="13" y2="19" />
+                </svg>
+                }
+
+                @case ('lifering') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <circle cx="10" cy="10" r="8" />
+                  <circle cx="10" cy="10" r="3.5" />
+                  <line x1="3" y1="3" x2="7" y2="7" />
+                  <line x1="13" y1="13" x2="17" y2="17" />
+                  <line x1="17" y1="3" x2="13" y2="7" />
+                  <line x1="7" y1="13" x2="3" y2="17" />
+                </svg>
+                }
+
+                @case ('mail') {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <rect x="2" y="4" width="16" height="12" rx="2" />
+                  <polyline points="2,4 10,11 18,4" />
+                </svg>
+                }
+
+                @default {
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <circle cx="10" cy="10" r="8" />
+                </svg>
+                }
+                } </span>
+              <span class="mega-menu__link-body">
+                <span class="mega-menu__link-label">{{ link.label }}</span>
+                <span class="mega-menu__link-desc">{{ link.description }}</span>
+              </span>
+            </a>
             }
           </div>
-
-        } @else {
-          <!-- Lien simple -->
-          <a
-            [routerLink]="item.path"
-            class="navbar__link"
-            routerLinkActive="navbar__link--active">
-            {{ item.label }}
-          </a>
+          }
+        </div>
         }
+      </div>
+
+      } @else {
+      <!-- Lien simple -->
+      <a [routerLink]="item.path" class="navbar__link" routerLinkActive="navbar__link--active">
+        {{ item.label }}
+      </a>
+      }
       }
     </nav>
 
     <!-- Actions auth (desktop) -->
     <div class="navbar__actions">
-      <a routerLink="/login"    class="navbar__link">Connexion</a>
+      <a routerLink="/login" class="navbar__link">Connexion</a>
       <a routerLink="/register" class="btn btn--nav-primary">Commencer gratuitement</a>
     </div>
 
     <!-- Burger (mobile) -->
-    <button
-      class="navbar__burger"
-      type="button"
-      [attr.aria-label]="drawerOpen() ? 'Fermer le menu' : 'Ouvrir le menu'"
-      [attr.aria-expanded]="drawerOpen()"
-      (click)="drawerOpen() ? closeDrawer() : openDrawer()">
+    <button class="navbar__burger" type="button" [attr.aria-label]="drawerOpen() ? 'Fermer le menu' : 'Ouvrir le menu'"
+      [attr.aria-expanded]="drawerOpen()" (click)="drawerOpen() ? closeDrawer() : openDrawer()">
       <span [class.navbar__burger-bar--top-open]="drawerOpen()"></span>
       <span [class.navbar__burger-bar--mid-open]="drawerOpen()"></span>
       <span [class.navbar__burger-bar--bot-open]="drawerOpen()"></span>
@@ -139,85 +217,80 @@
      DRAWER MOBILE
      ============================================= -->
 @if (drawerOpen()) {
-  <!-- Backdrop -->
-  <div class="drawer-backdrop" (click)="closeDrawer()" aria-hidden="true"></div>
+<!-- Backdrop -->
+<div class="drawer-backdrop" (click)="closeDrawer()" aria-hidden="true"></div>
 
-  <!-- Drawer -->
-  <nav class="drawer" aria-label="Menu mobile">
+<!-- Drawer -->
+<nav class="drawer" aria-label="Menu mobile">
 
-    <!-- Header drawer -->
-    <div class="drawer__header">
-      <a routerLink="/" class="drawer__logo" (click)="closeDrawer()">
-        <svg class="navbar__logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"
-             fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M32 6c-9 0-16 7-16 16 0 5 2 9 5 12v6h22v-6c3-3 5-7 5-12 0-9-7-16-16-16z"/>
-          <path d="M24 40h16M26 46h12"/>
-          <circle cx="20" cy="28" r="2"/>
-          <circle cx="44" cy="28" r="2"/>
-          <circle cx="32" cy="22" r="2"/>
-          <line x1="22" y1="28" x2="30" y2="22"/>
-          <line x1="42" y1="28" x2="34" y2="22"/>
-        </svg>
-        <span class="navbar__logo-text">AI Review Hub</span>
-      </a>
-      <button class="drawer__close" type="button" aria-label="Fermer le menu" (click)="closeDrawer()">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
-          <line x1="4" y1="4" x2="16" y2="16"/>
-          <line x1="16" y1="4" x2="4" y2="16"/>
+  <!-- Header drawer -->
+  <div class="drawer__header">
+    <a routerLink="/" class="drawer__logo" (click)="closeDrawer()">
+      <svg class="navbar__logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none"
+        stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M32 6c-9 0-16 7-16 16 0 5 2 9 5 12v6h22v-6c3-3 5-7 5-12 0-9-7-16-16-16z" />
+        <path d="M24 40h16M26 46h12" />
+        <circle cx="20" cy="28" r="2" />
+        <circle cx="44" cy="28" r="2" />
+        <circle cx="32" cy="22" r="2" />
+        <line x1="22" y1="28" x2="30" y2="22" />
+        <line x1="42" y1="28" x2="34" y2="22" />
+      </svg>
+      <span class="navbar__logo-text">AI Review Hub</span>
+    </a>
+    <button class="drawer__close" type="button" aria-label="Fermer le menu" (click)="closeDrawer()">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        aria-hidden="true">
+        <line x1="4" y1="4" x2="16" y2="16" />
+        <line x1="16" y1="4" x2="4" y2="16" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Liens du drawer -->
+  <div class="drawer__body">
+    @for (item of navItems; track item.label) {
+
+    @if (item.megaMenu) {
+    <!-- Section accordéon -->
+    <div class="drawer__section">
+      <button class="drawer__section-btn" type="button" [attr.aria-expanded]="drawerSection() === item.label"
+        (click)="toggleDrawerSection(item.label)">
+        {{ item.label }}
+        <svg class="drawer__section-chevron" [class.drawer__section-chevron--open]="drawerSection() === item.label"
+          viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+          stroke-linejoin="round" aria-hidden="true">
+          <polyline points="2 4 6 8 10 4" />
         </svg>
       </button>
-    </div>
 
-    <!-- Liens du drawer -->
-    <div class="drawer__body">
-      @for (item of navItems; track item.label) {
-
-        @if (item.megaMenu) {
-          <!-- Section accordéon -->
-          <div class="drawer__section">
-            <button
-              class="drawer__section-btn"
-              type="button"
-              [attr.aria-expanded]="drawerSection() === item.label"
-              (click)="toggleDrawerSection(item.label)">
-              {{ item.label }}
-              <svg class="drawer__section-chevron"
-                   [class.drawer__section-chevron--open]="drawerSection() === item.label"
-                   viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="2 4 6 8 10 4"/>
-              </svg>
-            </button>
-
-            @if (drawerSection() === item.label) {
-              <div class="drawer__section-body">
-                @for (col of item.megaMenu; track col.title) {
-                  <p class="drawer__col-title">{{ col.title }}</p>
-                  @for (link of col.links; track link.path) {
-                    <a [routerLink]="link.path" class="drawer__link" (click)="closeDrawer()">
-                      {{ link.label }}
-                    </a>
-                  }
-                }
-              </div>
-            }
-          </div>
-
-        } @else {
-          <a
-            [routerLink]="item.path"
-            class="drawer__link drawer__link--top"
-            (click)="closeDrawer()">
-            {{ item.label }}
-          </a>
+      @if (drawerSection() === item.label) {
+      <div class="drawer__section-body">
+        @for (col of item.megaMenu; track col.title) {
+        <p class="drawer__col-title">{{ col.title }}</p>
+        @for (link of col.links; track link.path) {
+        <a [routerLink]="link.path" class="drawer__link" (click)="closeDrawer()">
+          {{ link.label }}
+        </a>
         }
+        }
+      </div>
       }
     </div>
 
-    <!-- Footer drawer -->
-    <div class="drawer__footer">
-      <a routerLink="/login"    class="drawer__auth-link" (click)="closeDrawer()">Connexion</a>
-      <a routerLink="/register" class="btn btn--primary drawer__cta" (click)="closeDrawer()">Commencer gratuitement</a>
-    </div>
+    } @else {
+    <a [routerLink]="item.path" class="drawer__link drawer__link--top" (click)="closeDrawer()">
+      {{ item.label }}
+    </a>
+    }
+    }
+  </div>
 
-  </nav>
+  <!-- Footer drawer -->
+  <div class="drawer__footer">
+    <a routerLink="/login" class="drawer__auth-link" (click)="closeDrawer()">Connexion</a>
+    <a routerLink="/register" class="btn btn--primary drawer__cta" (click)="closeDrawer()">Commencer gratuitement</a>
+  </div>
+
+</nav>
 }

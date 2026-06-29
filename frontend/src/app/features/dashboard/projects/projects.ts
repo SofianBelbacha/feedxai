@@ -107,7 +107,9 @@ export class Projects implements OnInit {
   loadTrashCount(): void {
     this.service.getDeleted().subscribe({
       next: (projects) => this.deletedProjects.set(projects),
-      error: () => {}
+      error: (err) => {
+        console.error('loadTrashCount failed', err);
+      }    
     });
   }
 

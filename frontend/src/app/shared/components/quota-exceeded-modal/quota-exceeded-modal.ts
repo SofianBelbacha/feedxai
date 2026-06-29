@@ -12,8 +12,8 @@ export interface QuotaExceededData {
   selector: 'app-quota-exceeded-modal',
   imports: [CommonModule],
   template: `
-    <div class="modal-backdrop" (click)="onDismiss.emit()">
-      <div class="modal" (click)="$event.stopPropagation()" role="dialog"
+    <div class="modal-backdrop" (click)="onDismiss.emit()" (keydown.enter)="dismiss.emit()" (keydown.space)="dismiss.emit()" tabindex="0" role="button">
+      <div class="modal" role="dialog"
            aria-modal="true" aria-labelledby="quota-modal-title">
 
         <div class="modal__icon">📊</div>
@@ -57,7 +57,7 @@ export class QuotaExceededModal {
   private readonly router = inject(Router);
 
   readonly data = input.required<QuotaExceededData>();
-  readonly onDismiss = output<void>();
+  readonly dismiss = output<void>();
 
   readonly resetDate = computed(() => {
     const d = this.data().resetDate;
@@ -69,6 +69,6 @@ export class QuotaExceededModal {
 
   goToBilling(): void {
     this.router.navigate(['/dashboard/billing']);
-    this.onDismiss.emit();
+    this.dismiss.emit();
   }
 }

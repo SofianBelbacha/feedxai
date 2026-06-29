@@ -7,7 +7,7 @@ import { environment } from '../../../../environments/environment';
 
 type PaidPlanId = 'pro' | 'team';
 
-type PricingPlan = {
+interface PricingPlan {
   id: 'free' | PaidPlanId;
   name: string;
   price: string;

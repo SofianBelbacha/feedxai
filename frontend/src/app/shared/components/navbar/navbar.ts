@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, inject, OnDestroy, signal, computed } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 

@@ -222,7 +222,7 @@
 
             @for (fb of getListForStatus(col.status); track trackById($index, fb); let i = $index) {
             <div class="card" [class.done-card]="fb.status === 'Done'" cdkDrag [cdkDragData]="fb"
-              (click)="openDrawer(fb)">
+              (click)="openDrawer(fb)" tabindex="0" role="button" (keydown.enter)="openDrawer(fb)" (keydown.space)="openDrawer(fb)">
 
               <!-- Placeholder drag -->
               <div class="drag-placeholder" *cdkDragPlaceholder></div>

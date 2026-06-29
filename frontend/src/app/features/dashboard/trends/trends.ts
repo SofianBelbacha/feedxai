@@ -5,7 +5,7 @@ import { BaseChartDirective } from 'ng2-charts';
 import { ChartData, ChartOptions } from 'chart.js';
 
 import { TrendsService } from './trends.service';
-import { TrendsData, PeriodDays, CategoryEvolution, InsightType } from './trends.types';
+import { TrendsData, PeriodDays, InsightType } from './trends.types';
 import { DashboardContextService } from '../../../core/services/dashboard-context.service';
 
 @Component({

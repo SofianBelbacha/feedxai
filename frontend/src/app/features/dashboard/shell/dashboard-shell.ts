@@ -8,7 +8,7 @@ import { filter } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserService } from '../../../core/services/user.service';
 import { DashboardContextService } from '../../../core/services/dashboard-context.service';
-import { BillingService, QuotaResult } from '../../../shared/components/billing/billing.service';
+import { BillingService } from '../../../shared/components/billing/billing.service';
 import { ProjectSwitcher } from '../../../shared/components/project-switcher/project-switcher';
 import { QuotaStateService } from '../../../core/services/quota-state.service';
 import { QuotaModalService } from '../../../core/services/quota-modal.service';

@@ -1,9 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, computed, inject, OnDestroy, signal } from '@angular/core';
+import { AfterViewInit, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { environment } from '../../../../environments/environment';
 import { GoogleAuthService } from '../../../core/services/google-auth.service';
 import { parseApiError } from '../../../core/utils/api-error.utils';
 import { Terms } from '../../legal/terms/terms';
@@ -16,7 +15,7 @@ import { Privacy } from '../../legal/privacy/privacy';
   templateUrl: './register.html',
   styleUrl: './register.scss',
 })
-export class Register implements AfterViewInit, OnDestroy {
+export class Register implements AfterViewInit {
   private readonly auth   = inject(AuthService);
   private readonly router = inject(Router);
   private readonly googleAuth = inject(GoogleAuthService);
@@ -69,8 +68,6 @@ export class Register implements AfterViewInit, OnDestroy {
       this.googleLoading.set(false);
     });
   }
-
-  ngOnDestroy(): void { }
 
   // ─── Navigation étapes ────────────────────────────────────
   togglePassword(): void {

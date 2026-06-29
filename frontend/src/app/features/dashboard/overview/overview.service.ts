@@ -21,7 +21,7 @@ export class OverviewService {
   private readonly http = inject(HttpClient);
   private readonly API  = environment.apiUrl;
 
-  getDashboard(projectId?: string, days: number = 30): Observable<DashboardData> {
+  getDashboard(projectId?: string, days = 30): Observable<DashboardData> {
     const params = new URLSearchParams();
     if (projectId) params.set('projectId', projectId);
     params.set('days', days.toString());
