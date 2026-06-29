@@ -16,7 +16,6 @@ public class FeedbackAnalysisJob
     private readonly IAiQuotaService _quotaService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<FeedbackAnalysisJob> _logger;
-    private readonly CancellationToken cancellationToken;
 
     public FeedbackAnalysisJob(
         IAppDbContext context,

@@ -20,18 +20,18 @@ public class HangfireFeedbackAnalysisQueue : IFeedbackAnalysisQueue
             case "Team":
                 _backgroundJobs.Enqueue<FeedbackAnalysisJob>(
                     "critical",
-                    job => job.AnalyzeFeedbackPriorityAsync(feedbackId));
+                    job => job.AnalyzeFeedbackPriorityAsync(feedbackId, null!));
                 break;
 
             case "Pro":
                 _backgroundJobs.Enqueue<FeedbackAnalysisJob>(
-                    job => job.AnalyzeFeedbackAsync(feedbackId));
+                    job => job.AnalyzeFeedbackAsync(feedbackId, null!));
                 break;
 
             default: // Free
                 _backgroundJobs.Enqueue<FeedbackAnalysisJob>(
                     "free",
-                    job => job.AnalyzeFeedbackFreeAsync(feedbackId));
+                    job => job.AnalyzeFeedbackFreeAsync(feedbackId, null!));
                 break;
         }
     }
