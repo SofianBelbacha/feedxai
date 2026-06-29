@@ -46,3 +46,16 @@ export interface PagedResult<T> {
         totalPages: number;
     };
 }
+
+export interface ColumnState {
+  items: Feedback[];
+  page: number;
+  pageSize: number;
+  total: number;
+  loading: boolean;
+  loadingMore: boolean;
+}
+
+export function emptyColumnState(pageSize = 30): ColumnState {
+  return { items: [], page: 1, pageSize, total: 0, loading: false, loadingMore: false };
+}
