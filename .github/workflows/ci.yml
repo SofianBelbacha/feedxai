@@ -1,4 +1,4 @@
-name: CI — Tests
+name: CI FeedxAI  — Tests
 
 on:
   push:
@@ -70,8 +70,8 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_DB:       aireviewhub_test
-          POSTGRES_USER:     postgres
+          POSTGRES_DB: aireviewhub_test
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: test_password
         ports:
           - 5433:5432

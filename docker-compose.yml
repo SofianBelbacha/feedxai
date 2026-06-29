@@ -8,7 +8,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: final
-    container_name: aireviewhub-backend
+    container_name: feedxai-backend
     restart: unless-stopped
     profiles:
       - prod
@@ -31,7 +31,7 @@ services:
       retries: 5
       start_period: 15s
     networks:
-      - aireviewhub-network
+      - feedxai-network
 
   # ============================
   # Frontend Angular
@@ -41,7 +41,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: runner
-    container_name: aireviewhub-frontend
+    container_name: feedxai-frontend
     restart: unless-stopped
     profiles:
       - prod
@@ -51,14 +51,14 @@ services:
       backend:
         condition: service_healthy
     networks:
-      - aireviewhub-network
+      - feedxai-network
 
   # ============================
   # Base de données PostgreSQL
   # ============================
   db:
     image: postgres:17-alpine
-    container_name: aireviewhub-db
+    container_name: feedxai-db
     restart: unless-stopped
     profiles:
       - prod
@@ -76,7 +76,7 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - aireviewhub-network
+      - feedxai-network
 
 # ============================
 # Volumes persistants
@@ -88,5 +88,5 @@ volumes:
 # Réseau interne
 # ============================
 networks:
-  aireviewhub-network:
+  feedxai-network:
     driver: bridge

@@ -11,7 +11,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
       target: dev
-    container_name: aireviewhub-backend-dev
+    container_name: feedxai-backend-dev
     profiles:
       - dev
     ports:
@@ -36,7 +36,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      - aireviewhub-network
+      - feedxai-network
 
 
   angular-dev:
@@ -44,7 +44,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.dev
       target: dev
-    container_name: aireviewhub-angular-dev
+    container_name: feedxai-angular-dev
     profiles:
       - dev
     ports:
@@ -58,11 +58,11 @@ services:
       backend-dev:
         condition: service_started
     networks:
-      - aireviewhub-network
+      - feedxai-network
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: aireviewhub-pgadmin
+    container_name: feedxai-pgadmin
     profiles:
       - dev
     environment:
@@ -76,7 +76,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      - aireviewhub-network
+      - feedxai-network
     volumes:
       - pgadmin-data:/var/lib/pgadmin
   
@@ -90,7 +90,7 @@ services:
     ports:
       - "3000:80"
     networks:
-      - aireviewhub-network
+      - feedxai-network
 
   stripe-cli:
     image: stripe/stripe-cli:latest
@@ -103,7 +103,7 @@ services:
     volumes:
       - stripe-config:/root/.config/stripe
     networks:
-      - aireviewhub-network
+      - feedxai-network
     depends_on:
       backend-dev:
         condition: service_started

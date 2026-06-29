@@ -3,9 +3,9 @@ services:
   # Base de données de test — éphémère, détruite après les tests
   db-test:
     image: postgres:17-alpine
-    container_name: aireviewhub-db-test
+    container_name: feedxai-db-test
     environment:
-      POSTGRES_DB:       aireviewhub_test
+      POSTGRES_DB:       feedxai_test
       POSTGRES_USER:     postgres
       POSTGRES_PASSWORD: test_password
     ports:
@@ -24,7 +24,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.test
-    container_name: aireviewhub-tests
+    container_name: feedxai-tests
     environment:
       - ASPNETCORE_ENVIRONMENT=Test
       - ConnectionStrings__DefaultConnection=Host=db-test;Port=5432;Database=aireviewhub_test;Username=postgres;Password=test_password
