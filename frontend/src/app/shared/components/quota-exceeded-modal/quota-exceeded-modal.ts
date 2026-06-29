@@ -12,7 +12,7 @@ export interface QuotaExceededData {
   selector: 'app-quota-exceeded-modal',
   imports: [CommonModule],
   template: `
-    <div class="modal-backdrop" (click)="onDismiss.emit()" (keydown.enter)="dismiss.emit()" (keydown.space)="dismiss.emit()" tabindex="0" role="button">
+    <div class="modal-backdrop" (click)="dismiss.emit()" (keydown.enter)="dismiss.emit()" (keydown.space)="dismiss.emit()" tabindex="0" role="button">
       <div class="modal" role="dialog"
            aria-modal="true" aria-labelledby="quota-modal-title">
 
@@ -43,7 +43,7 @@ export interface QuotaExceededData {
           <button class="btn btn--primary" (click)="goToBilling()">
             Voir les plans →
           </button>
-          <button class="btn btn--ghost" (click)="onDismiss.emit()">
+          <button class="btn btn--ghost" (click)="dismiss.emit()">
             Plus tard
           </button>
         </div>
