@@ -16,7 +16,7 @@
     "@angular/compiler": "^21.2.0",
     "@angular/core": "^21.2.0",
     "@angular/forms": "^21.2.0",
-    "@angular/platform-browser": "^21.2.0",
+    "@angular/platform-browser": "^22.0.4",
     "@angular/router": "^21.2.0",
     "chart.js": "^4.5.1",
     "geist": "^1.7.0",
