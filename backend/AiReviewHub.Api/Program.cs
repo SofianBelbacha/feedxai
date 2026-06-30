@@ -42,25 +42,22 @@ builder.Services
         };
     });
 
+// ─── CORS ───────────────────────────────────────────────────
+// Une seule source de vérité : "FrontendUrl" en config/variable d'env,
+// avec fallback sur localhost:4200 pour le développement local.
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("Development", policy =>
-    {
-        policy
-            .WithOrigins("http://localhost:4200")
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials(); // ← indispensable pour les cookies
-    });
+    options.AddPolicy("Angular", policy =>
+        policy.WithOrigins(builder.Configuration["FrontendUrl"] ?? "http://localhost:4200")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials());
 
-    options.AddPolicy("Production", policy =>
-    {
-        policy
-            .WithOrigins("https://ton-domaine.com")
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
+    // Policy pour le widget — accepte TOUTES les origines (intégré sur des sites tiers)
+    options.AddPolicy("Widget", policy =>
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .WithMethods("POST", "OPTIONS"));
 });
 
 builder.Services.AddRateLimiter(options =>
@@ -89,24 +86,7 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
-
 builder.Services.AddAuthorization();
-
-builder.Services.AddCors(options =>
-{
-    // Policy existante pour l'app Angular
-    options.AddPolicy("Angular", policy =>
-        policy.WithOrigins("http://localhost:4200")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials());
-
-    // Policy pour le widget — accepte TOUTES les origines
-    options.AddPolicy("Widget", policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyHeader()
-              .WithMethods("POST", "OPTIONS"));
-});
 
 var app = builder.Build();
 
@@ -116,8 +96,6 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
 }
-
-app.UseCors(app.Environment.IsDevelopment() ? "Development" : "Production");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -135,7 +113,6 @@ app.UseRateLimiter();
 
 app.UseMiddleware<ExceptionMiddleware>();
 
-
 // Planifie le job toutes les nuits à minuit
 RecurringJob.AddOrUpdate<RefreshTokenCleanupJob>(
     "cleanup-refresh-tokens",
@@ -147,8 +124,6 @@ RecurringJob.AddOrUpdate<PurgeDeletedProjectsJob>(
     job => job.ExecuteAsync(),
     Cron.Daily); // tous les jours à minuit
 
-
-// Dans le pipeline
 app.UseCors("Angular");
 
 app.UseAuthentication();

@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'http://localhost:5000/api',
+  apiUrl: 'https://feedxai.onrender.com/api',
   widgetCdnUrl:    'http://localhost:3000/widget.iife.js',
   googleClientId: '1027937941865-squt6gpfdlkrfs9euhia6dvjvu9soljo.apps.googleusercontent.com',
   stripePrices: {
