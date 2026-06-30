@@ -1,4 +1,4 @@
-name: CI FeedxAI  — Tests
+name: CI FeedxAI — Tests
 
 on:
   push:

@@ -14,14 +14,17 @@ namespace AiReviewHub.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructureDI(
-        this IServiceCollection services,
-        IConfiguration configuration)
+    public static IServiceCollection AddInfrastructureDI(this IServiceCollection services, IConfiguration configuration)
     {
+
+        // ─── Base de données ──────────────────────────────────
+        // Render injecte DATABASE_URL au format URI (postgres://user:pass@host:port/db),
+        // pas au format clé-valeur attendu par Npgsql — on convertit si besoin.
+        var connectionString = ResolveConnectionString(configuration);
+
         // ─── Base de données ──────────────────────────────────
         services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(
-                configuration.GetConnectionString("DefaultConnection")));
+            options.UseNpgsql(connectionString));
 
         services.AddScoped<IAppDbContext>(sp =>
             sp.GetRequiredService<AppDbContext>());
@@ -58,8 +61,7 @@ public static class DependencyInjection
             .UseRecommendedSerializerSettings()
             .UsePostgreSqlStorage(options =>
             {
-                options.UseNpgsqlConnection(
-                    configuration.GetConnectionString("DefaultConnection"));
+                options.UseNpgsqlConnection(connectionString);
             }));
 
         services.AddHangfireServer(options =>
@@ -73,5 +75,32 @@ public static class DependencyInjection
         services.AddScoped<RefreshTokenCleanupJob>();
 
         return services;
+    }
+
+    private static string ResolveConnectionString(IConfiguration configuration)
+    {
+        // 1. Format .NET classique (local, ou variable d'env ConnectionStrings__DefaultConnection)
+        var configured = configuration.GetConnectionString("DefaultConnection");
+        if (!string.IsNullOrWhiteSpace(configured))
+            return configured;
+
+        // 2. Format URI fourni par Render (DATABASE_URL)
+        var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+        if (string.IsNullOrWhiteSpace(databaseUrl))
+            throw new InvalidOperationException(
+                "No database connection string configured (neither ConnectionStrings:DefaultConnection nor DATABASE_URL).");
+
+        var uri = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo.Split(':', 2);
+
+        return new Npgsql.NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.Port,
+            Database = uri.AbsolutePath.TrimStart('/'),
+            Username = userInfo[0],
+            Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty,
+            SslMode = Npgsql.SslMode.Require
+        }.ToString();
     }
 }
