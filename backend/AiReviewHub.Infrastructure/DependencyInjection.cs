@@ -96,7 +96,7 @@ public static class DependencyInjection
         return new Npgsql.NpgsqlConnectionStringBuilder
         {
             Host = uri.Host,
-            Port = uri.Port,
+            Port = uri.Port == -1 ? 5432 : uri.Port,
             Database = uri.AbsolutePath.TrimStart('/'),
             Username = userInfo[0],
             Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty,

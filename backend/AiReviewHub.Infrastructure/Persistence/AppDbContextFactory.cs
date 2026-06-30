@@ -16,8 +16,7 @@ namespace AiReviewHub.Infrastructure.Persistence
                 .AddJsonFile("appsettings.json")
                 .Build();
 
-            var connectionString =
-                configuration.GetConnectionString("DefaultConnection");
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
 
             var optionsBuilder =
                 new DbContextOptionsBuilder<AppDbContext>();
